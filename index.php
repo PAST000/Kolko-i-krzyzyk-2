@@ -1,3 +1,7 @@
+<?php
+    require 'config.php'; 
+?>
+
 <!DOCTYPE html>
 <html lang="pl">
 <head>
@@ -5,6 +9,7 @@
     <meta name="description" content="Kółko i krzyżyk 2">
     <title>Kółko i krzyżyk 2</title>
     <link rel="stylesheet" href="style.css">
+    <script src="script.js"></script> 
 </head>
 <body>
     <div id="headerWrapper">
@@ -26,9 +31,17 @@
                 <label for="remember">Zapamiętaj mnie</label>
                 <input type="submit" value="Zaloguj">
             </form>
-            <div class="buttonWrapper">
-                <button id="guest"> Dołącz jako gość</button>
-            </div>
+            <section class="buttonsContainer">
+                <div class="buttonWrapper">
+                    <button id="guest">Dołącz jako gość</button>
+                </div>
+                <div class="buttonWrapper">
+                    <button id="newUser" onclick="document.getElementById('modalWrapper').style.display = 'block';">Zarejestruj się</button>
+                </div>
+            </section> 
+            <section id="modalWrapper">
+                <iframe src="modal.html" style="width: 100%; height: 100%;" title="Rejestracja"></iframe>
+            <section>
         </article>
     </main>
     <footer>
