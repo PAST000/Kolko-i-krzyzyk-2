@@ -7,6 +7,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="description" content="Kółko i krzyżyk 2">
+    <link rel="icon" type="image/x-icon" href="resources/icon.ico">
     <title>Kółko i krzyżyk 2</title>
     <link rel="stylesheet" href="style.css">
     <script src="script.js"></script> 
@@ -30,6 +31,7 @@
                 <input type="checkbox" value="remember" id="remember">
                 <label for="remember">Zapamiętaj mnie</label>
                 <input type="submit" value="Zaloguj">
+                <button id="recoverPass">Zapomniałeś hasła?</button>
             </form>
             <section class="buttonsContainer">
                 <div class="buttonWrapper">
@@ -40,7 +42,7 @@
                 </div>
             </section> 
             <section id="modalWrapper">
-                <iframe src="modal.html" style="width: 100%; height: 100%;" title="Rejestracja"></iframe>
+                <iframe src="modal.php" style="width: 100%; height: 100%;" title="Rejestracja"></iframe>
             <section>
         </article>
     </main>
