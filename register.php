@@ -9,6 +9,8 @@
     $password = $_POST["password"];
     $passwordCheck = $_POST["passwordCheck"];
 
+    echo "włącza się";
+
     if(empty($login)){
         header("Location: index.php?registrationError = Login jest wymagany.");
         exit();
@@ -19,7 +21,6 @@
     }
     if(empty($password)){
         header("Location: index.php?registrationError = Hasło jest wymagane.");
-        echo("test");
         exit();
     }
     if(empty($passwordCheck)){
@@ -53,6 +54,8 @@
         header("Location: index.php?registrationError = Hasło nie zgadza się ze sprawdzeniem hasła.");
         exit();
     }
+
+    echo "przechodzi testy";
 
     session_start();
     $conn = new mysqli($servername, $username, $password);

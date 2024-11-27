@@ -82,7 +82,7 @@
 </head>
 <body>
     <main>
-        <form method="post" action="register.php">
+        <form method="post" action="register.php" id="form">
             <?php if(isset($_GET["registrationError"])){ ?>
                     <p id="error"> <?php echo($_GET["registrationError"]); ?> </p>
             <?php } ?>
@@ -111,6 +111,20 @@
             }
         });
 
+        document.getElementById('form').addEventListener('submit', 
+            function(e) {
+                console.log("fetchTest");
+                e.preventDefault(); // Zatrzymanie odświeżania strony
+                const formData = new FormData(this);
+
+                fetch('register.php', {
+                    method: 'POST',
+                    //body: formData,
+                })
+                .then(response => response.text())
+                .then(data => console.log(data))
+                .catch(error => console.error('Fetch error:', error));
+        });
     </script>
 </body>
 </html>
