@@ -1,7 +1,3 @@
-<?php
-    require 'config.php'; 
-?>
-
 <!DOCTYPE html>
 <html lang="pl">
 <head>
@@ -10,7 +6,13 @@
     <link rel="icon" type="image/x-icon" href="resources/icon.ico">
     <title>Kółko i krzyżyk 2</title>
     <link rel="stylesheet" href="style.css">
-    <script src="script.js"></script> 
+    <script>
+        var modal = document.getElementById("modalWrapper");
+
+        function openModal(modal) {
+            modal.style.display = "block";
+        }
+    </script> 
 </head>
 <body>
     <div id="headerWrapper">
@@ -25,9 +27,9 @@
             <button>Button3</button> 
         </nav>
         <article>
-            <form method="post">
-                <input type="text" placeholder="Login">
-                <input type="password" placeholder="Hasło">
+            <form method="post" action="login.php">
+                <input type="text" placeholder="Login" name="login" required>
+                <input type="password" placeholder="Hasło" name="password" required>
                 <input type="checkbox" value="remember" id="remember">
                 <label for="remember">Zapamiętaj mnie</label>
                 <input type="submit" value="Zaloguj">

@@ -77,22 +77,21 @@
             border-radius: 6px;
             padding-left: 10px;
             font-size: 18px;
+            display: none;
         }
     </style>
 </head>
 <body>
     <main>
         <form method="post" action="register.php" id="form">
-            <?php if(isset($_GET["registrationError"])){ ?>
-                    <p id="error"> <?php echo($_GET["registrationError"]); ?> </p>
-            <?php } ?>
-
             <button id="close" onclick="parent.document.getElementById('modalWrapper').style.display = 'none';"> </button>
-            <input type="text" id="login" name="login" placeholder="Login">
-            <input type="text" id="displayName" name="displayName" placeholder="Wyświetlana nazwa" onfocus="writeDisplayName = false;">
-            <input type="text" name="email" placeholder="adres@poczta.com">
-            <input type="password" name="password" placeholder="Hasło">
-            <input type="password" name="passwordCheck" placeholder="Potwierdź hasło">
+            <p id="error"> </p>
+
+            <input type="text" id="login" name="login" placeholder="Login" required maxlength=20>
+            <input type="text" id="displayName" name="displayName" placeholder="Wyświetlana nazwa" onfocus="writeDisplayName = false;" required maxlength=50>
+            <input type="text" name="email" placeholder="adres@poczta.com" maxlength=50>
+            <input type="password" name="password" placeholder="Hasło" required>
+            <input type="password" name="passwordCheck" placeholder="Potwierdź hasło" required>
 
             <input type="checkbox" value="remember" id="remember">
             <label for="remember">Zapamiętaj mnie</label>
@@ -111,20 +110,26 @@
             }
         });
 
-        document.getElementById('form').addEventListener('submit', 
-            function(e) {
-                console.log("fetchTest");
-                e.preventDefault(); // Zatrzymanie odświeżania strony
-                const formData = new FormData(this);
+        document.getElementById('form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const form = e.target;
+            const formData = new FormData(form);
 
-                fetch('register.php', {
-                    method: 'POST',
-                    //body: formData,
-                })
-                .then(response => response.text())
-                .then(data => console.log(data))
-                .catch(error => console.error('Fetch error:', error));
-        });
+            fetch('register.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            })
+            .catch(error => console.error('Błąd:', error));
+                });
     </script>
 </body>
 </html>
+
+<?php
+    header('Access-Control-Allow-Origin: *'); 
+    header('Access-Control-Allow-Methods: POST, GET, OPTIONS'); 
+    header('Access-Control-Allow-Headers: Content-Type'); 
+?>
