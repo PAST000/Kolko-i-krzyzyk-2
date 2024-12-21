@@ -1,0 +1,10 @@
+Do serwera:
+    -Put(x,y,z)
+    -Leave()
+
+Z serwera:
+    -Error(type, txt)
+    -Refresh(cube, turn[id])
+    -Won(name, id)
+    -Joined(name, id)
+    -Left(name, id)

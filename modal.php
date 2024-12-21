@@ -73,20 +73,22 @@
         #error{
             box-sizing: border-box;
             width: 100%;
-            height: 42px;
+            height: 36px;
             border-radius: 6px;
             padding-left: 10px;
-            font-size: 18px;
+            font-size: 22px;
+            font-weight: bold;
+            color: red;
             display: none;
+            margin: 0;
         }
     </style>
 </head>
 <body>
     <main>
-        <form method="post" action="register.php" id="form">
+        <form method="post" id="form">
             <button id="close" onclick="parent.document.getElementById('modalWrapper').style.display = 'none';"> </button>
-            <p id="error"> </p>
-
+            <p id="error"></p>
             <input type="text" id="login" name="login" placeholder="Login" required maxlength=20>
             <input type="text" id="displayName" name="displayName" placeholder="Wyświetlana nazwa" onfocus="writeDisplayName = false;" required maxlength=50>
             <input type="text" name="email" placeholder="adres@poczta.com" maxlength=50>
@@ -112,24 +114,21 @@
 
         document.getElementById('form').addEventListener('submit', function(e) {
             e.preventDefault();
-            const form = e.target;
-            const formData = new FormData(form);
+            const formData = new FormData(e.target);
 
-            fetch('register.php', {
-                method: 'POST',
+            fetch("register.inc.php", {
+                method:"POST",
                 body: formData
             })
-            .then(response => {
-                throw new Error(`HTTP error! Status: ${response.status}`);
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    document.getElementById("error").style.display = "inline-block";
+                    document.getElementById("error").innerHTML = data.error;
+                }
             })
-            .catch(error => console.error('Błąd:', error));
+            .catch(err => console.error("Błąd połączenia: ", err));
                 });
     </script>
 </body>
 </html>
-
-<?php
-    header('Access-Control-Allow-Origin: *'); 
-    header('Access-Control-Allow-Methods: POST, GET, OPTIONS'); 
-    header('Access-Control-Allow-Headers: Content-Type'); 
-?>

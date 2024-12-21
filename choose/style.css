@@ -86,59 +86,8 @@ nav > button:hover{
     display: inline-block;
 }
 
-form{
-    display: inline-block;
-    border: black solid 3px;
-    border-radius: 10px;
-    width: 23%;
-    text-align: center;
-    padding: 10px 14px;
-    margin-right: 15px;
-    background-color: #f2f3f4;
-    box-shadow: 4px 4px 10px;
-}
-
-form p{
-    margin: 0;
-    margin-top: 3px;
-    color: red;
-    font-weight: bold;
-    font-size: 22px;
-}
-
-input[type="text"], input[type="password"], input[type="submit"]{
-    box-sizing: border-box;
-    width: 100%;
-    height: 42px;
-    border-radius: 6px;
-    padding-left: 10px;
-    font-size: 18px;
-    margin-top: 15px;
-}
-
-input[type="text"]:focus, input[type="password"]:focus{
-    border: 2px solid black;
-    outline: 0px;
-    width: 100%;
-}
-
-input[type="checkbox"]{
-    width: 18px;
-    height: 18px;
-    margin: 10px 2px 2px;
-}
-
-#recoverPass{
-    border: 0;
-    background-color: transparent;
-    float: right;
-    margin: 8px;
-    margin-top: 15px;
-    text-decoration: underline;
-}
-
 .buttonsContainer{
-    width: 250px;
+    width: 380px;
     text-align: left;
 }
 
@@ -151,31 +100,25 @@ input[type="checkbox"]{
     background-color: rgba(210, 210, 210, 0.6);
 }
 
-#guest, #newUser{
+#local, #multi, #computer{
     color: white;
     background-color: transparent;
     border: none;
-    font-size: 26px;
+    font-size: 30px;
     margin: 5px;
 }
 
-#guest::before{
-    content: url(resources/user.svg);
-    margin-right: 5px;
+#local::before{
+    content: url(../resources/local.svg);
+    margin-right: 8px;
 }
 
-#newUser::before{
-    content: url(resources/newUser.svg);
-    margin-right: 5px;
+#multi::before{
+    content: url(../resources/multi.svg);
+    margin-right: 8px;
 }
 
-#modalWrapper{
-    display: none;
-    z-index: 2;
-    width: 100%;
-    height: 100%;
-    position: fixed;
-    left: 0;
-    top: 0;
-    background-color: rgba(0,0,0,0.55);
+#computer::before{
+    content: url(../resources/computer.svg);
+    margin-right: 8px;
 }
