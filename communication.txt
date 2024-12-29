@@ -1,10 +1,14 @@
 Do serwera:
-    -Put(x,y,z)
-    -Leave()
+    -Join  nick
+    -Put   x y z
+    -Leave 
 
 Z serwera:
-    -Error(type, txt)
-    -Refresh(cube, turn[id])
-    -Won(name, id)
-    -Joined(name, id)
-    -Left(name, id)
+    -Error   type txt
+    -Refresh cube turn[id]
+    -Won     name id 
+    -Joined  name id
+    -Left    name id
+
+
+id -> ['O', 'X', 'P'] //Kula, krzyżyk, piramida
