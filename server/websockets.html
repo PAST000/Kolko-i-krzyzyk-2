@@ -1,0 +1,28 @@
+<html>
+<body>
+    <div id="root">
+        <button onclick="join()">JOIN</button>
+        <button onclick="put(1,2,3)">PUT</button>
+        <button onclick="leave()">LEAVE</button>
+    </div>
+    <script>
+        var host = 'ws://127.0.0.1:12345/server.php';
+        var socket = new WebSocket(host);
+        socket.onmessage = function(e) {
+            document.getElementById('root').innerHTML = e.data;
+        };
+
+        function join(){
+            socket.send("JOIN(gracz1)");
+        }
+
+        function put(x,y,z){
+            socket.send("PUT(" + x + "," + y + "," + z +")");
+        }
+
+        function leave(x,y,z){
+            socket.send("LEAVE()");
+        }
+    </script>
+</body>
+</html>
