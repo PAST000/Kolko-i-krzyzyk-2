@@ -73,26 +73,27 @@
         #error{
             box-sizing: border-box;
             width: 100%;
-            height: 42px;
+            height: 36px;
             border-radius: 6px;
             padding-left: 10px;
-            font-size: 18px;
+            font-size: 22px;
+            font-weight: bold;
+            color: red;
+            display: none;
+            margin: 0;
         }
     </style>
 </head>
 <body>
     <main>
-        <form method="post" action="register.php" id="form">
-            <?php if(isset($_GET["registrationError"])){ ?>
-                    <p id="error"> <?php echo($_GET["registrationError"]); ?> </p>
-            <?php } ?>
-
+        <form method="post" id="form">
             <button id="close" onclick="parent.document.getElementById('modalWrapper').style.display = 'none';"> </button>
-            <input type="text" id="login" name="login" placeholder="Login">
-            <input type="text" id="displayName" name="displayName" placeholder="Wyświetlana nazwa" onfocus="writeDisplayName = false;">
-            <input type="text" name="email" placeholder="adres@poczta.com">
-            <input type="password" name="password" placeholder="Hasło">
-            <input type="password" name="passwordCheck" placeholder="Potwierdź hasło">
+            <p id="error"></p>
+            <input type="text" id="login" name="login" placeholder="Login" required maxlength=20>
+            <input type="text" id="displayName" name="displayName" placeholder="Wyświetlana nazwa" onfocus="writeDisplayName = false;" required maxlength=50>
+            <input type="text" name="email" placeholder="adres@poczta.com" maxlength=50>
+            <input type="password" name="password" placeholder="Hasło" required>
+            <input type="password" name="passwordCheck" placeholder="Potwierdź hasło" required>
 
             <input type="checkbox" value="remember" id="remember">
             <label for="remember">Zapamiętaj mnie</label>
@@ -111,20 +112,23 @@
             }
         });
 
-        document.getElementById('form').addEventListener('submit', 
-            function(e) {
-                console.log("fetchTest");
-                e.preventDefault(); // Zatrzymanie odświeżania strony
-                const formData = new FormData(this);
+        document.getElementById('form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
 
-                fetch('register.php', {
-                    method: 'POST',
-                    //body: formData,
-                })
-                .then(response => response.text())
-                .then(data => console.log(data))
-                .catch(error => console.error('Fetch error:', error));
-        });
+            fetch("register.inc.php", {
+                method:"POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    document.getElementById("error").style.display = "inline-block";
+                    document.getElementById("error").innerHTML = data.error;
+                }
+            })
+            .catch(err => console.error("Błąd połączenia: ", err));
+                });
     </script>
 </body>
 </html>
