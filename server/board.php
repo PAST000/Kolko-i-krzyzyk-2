@@ -39,7 +39,9 @@ class Board{
         }
     }
 
-    function put($id, $pawn){  
+    function put($v, $pawn){ 
+        $id = arrToId($v);
+        if($id === false) return false; 
         if($id < 0 || $id >= count($this->board)) return false;
         if($pawn < 0 || $pawn > count($this->pawns)) return false;
 
