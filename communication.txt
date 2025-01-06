@@ -1,14 +1,43 @@
 Do serwera:
     -Join  nick
-    -Put   x y z
+    -Put   cords[]
     -Leave 
+    -Ping/Reping
 
+Tylko admin:
+    -Create numOfPlayers sizes[] target 
+    -Drop  //Koniec gry
+    -Clear position[]
+    -ClearPlayer id
+    -Kick id
+    -Pause/Unpause 
+    -Ping/Reping
+ 
 Z serwera:
     -Error   type txt
-    -Refresh cube turn[id]
+    -Refresh players[](id => nick) board target turn(id) yourID
     -Won     name id 
     -Joined  name id
     -Left    name id
-
+    -Closed
+    -Kicked
+    -Paused/Unpaused
+    -Ping/Reping
 
 id -> ['O', 'X', 'P'] //Kula, krzyżyk, piramida
+
+Typy błędów: 
+    0x Błędy ogólne
+	00 Nie masz uprawnień (Nie jesteś graczem)
+    1x Błędy z przesłaną komendą
+	10 Niepoprawny typ komendy
+	11 Zbyt mało argumentów
+    2x Błąd zwrócony z planszy (+Tworzenie planszy)
+	20 Opis błędu jest 2. argumentem
+	21 Niepoprawna ilość graczy
+	22 Niepoprawne koordynaty (Put)
+    3x Błąd przy dołączaniu do gry
+	30 Gra jest pełna
+	31 Nie podano nicku
+    9x Błędy administratorskie
+	90 Nie istnieje taki gracz
