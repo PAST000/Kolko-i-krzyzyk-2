@@ -136,6 +136,10 @@ class Board{
     function getSizes(){
         return $this->sizes;
     }
+
+    function implode($separator = ','){
+        return implode($separator, $this->board);
+    }
 }
 
 class Direction{

@@ -1,10 +1,10 @@
 <?php
 const $commandTypes = [
-    "join", "put", "leave"
+    "join", "put", "leave", "ping", "reping"
 ];
 
 const $adminCommands = [
-    "create", "drop", "pause", "kick"
+    "create", "drop", "kick", "pause", "unpause", "ping", "reping"
 ];
 
 function encodeMessage($message) {
