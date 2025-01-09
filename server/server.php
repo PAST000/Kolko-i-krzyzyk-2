@@ -1,5 +1,7 @@
 <?php
 require "serverFunctions.php";
+require "game.php";
+
 $address = '0.0.0.0';
 $port = 3310;
 $paused = false;
@@ -176,3 +178,4 @@ while (true) {
         }
     }
 }
+?>

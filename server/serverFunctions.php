@@ -63,20 +63,6 @@ function handshake($newClient){
     socket_write($newClient, $headers, strlen($headers));
 }
 
-
-function createMessage($commandType, $args){
-    if(strlne($commandType) < 3) return false;
-    $commandType = strtolower($commandType);
-    $commandType[0] = strtoupper($commandType[0]);
-
-    $message = $commandType;
-    foreach($args as $arg){
-        $message .= $arg;
-        $message .= ' ';
-    }
-    return message;
-}
-
 function send($txt, $sockets, $skip = []){ 
     $message = encodeMessage($txt);
     foreach($sockets as $socket){

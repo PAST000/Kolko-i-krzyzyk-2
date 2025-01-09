@@ -22,12 +22,10 @@ class Board{
         $this->sizes = $sizesArr;
         $this->targer = $trg;
         
-        for($i = 0; $i < $this->dims; $i++){
+        for($i = 0; $i < $this->dims; $i++)
             $this->sizesMult *= $this->sizes[$i];
-        }
-        for ($i = 0; $i < $this->sizesMult; $i++) {
+        for ($i = 0; $i < $this->sizesMult; $i++) 
             $this->board[$i] = null;
-        }
         initDirs();
     }
 
