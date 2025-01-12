@@ -1,5 +1,6 @@
 <?php
 require "board.php";
+require "serverFunctions.php";
 
 class Game{
     private $address;
@@ -19,9 +20,10 @@ class Game{
 
     private const $maxPlayers = 3;          // Maksymalna możliwa do ustawienia liczba graczy
     private const $availableIDs = [0,1,2];  // Kula, krzyżyk, piramida
+    private const $maxMessLen = 6;          // Ilość znaków w długości wiadomości (jeśli mniej dodajemy zera wiodące)
 
     private const $commandTypes = [
-        "join", "put", "leave", "ping", "reping"
+        "put", "leave", "ping", "reping"
     ];
     
     private const $adminCommands = [
@@ -29,10 +31,10 @@ class Game{
     ];
 
     function __construct($addr, $prt, $adm, $nOfPlayers, $sizes = [4,4,4], $target = 3){
-        if(!filter_var($addr, FILTER_VALIDATE_IP)){}
-        if(empty($prt) || $prt < 0 || $prt > 65535){}
-        if(empty($nOfPlayers) || $nOfPlayers < 0 || $nOfPlayers > $maxPlayers){}
-        if(empty($adm) || !$adm){}
+        if(!filter_var($addr, FILTER_VALIDATE_IP)) throw new Exception("Nie poprawny adres");
+        if(empty($prt) || $prt < 0 || $prt > 65535) throw new Exception("Nie poprawny port");
+        if(empty($nOfPlayers) || $nOfPlayers < 0 || $nOfPlayers > $maxPlayers) throw new Exception("Nie poprawna ilość graczy, maksymalna to: " . (string)$maxPlayers);
+        if(empty($adm) || !$adm) throw new Exception("Administrator jest wymagany");
 
         $this->address = $address;           
         $this->port = $prt;                
@@ -44,26 +46,28 @@ class Game{
         socket_set_option($server, SOL_SOCKET, SO_REUSEADDR, 1);
         socket_bind($server, $address, $port);
         socket_listen($server); 
+        socket_set_nonblock($server);
+
+        $this->monitor();
     }
        
     private function monitor(){
         while (true) {
             socket_select($read, $write, $except, 0);
             foreach ($read as $socket => $idNick) {
-                // Nowe połączenie od klienta
                 if ($socket === $server) {
-                    $newClient = socket_accept($server);
+                    /*$newClient = socket_accept($server);
                     $clients[$newClient] = [-1, ""];
                     handshake($newClient);
-                    $read = $clients;
-                    continue
+                    socket_set_nonblock($newClient);
+                    $read = $clients;*/
+                    continue;
                 } 
-                $data = socket_read($socket, 2048);
-                if ($data === false || $data === '') continue;
-                $args = decodeMessage($data);
-                if(!$args) continue;
+
+                $args = readMessage($socket);
+                if($args === false || empty($args) || $args === "") continue;
                     
-                if($socket === $this->admin){  //Admin
+                if($socket === $admin){  //Admin
                     if(!$this->admin($args, $socket)) continue;
                 }
                 else{
@@ -76,18 +80,17 @@ class Game{
                 }
         
                 $players = array_filter($clients, function($client){   
-                    return isset($client[0]) && $client[0] >=0 && $clients[0] <= $maxPlayers - 1
+                    return isset($client[0]) && $client[0] >=0 && $client[0] <= $maxPlayers - 1
                 });
         
                 // Refresh
                 foreach($read as $client => $idNick)
-                    send("Refresh" . implode(',', $players) . $board->implode() . (string)$target . (string)$turn . (string)$idNick[0], [$client], [$server]);
-                }
+                    send("Refresh" . implode(',', $players) . $board->implode() . (string)$target . (string)$turn . (string)$idNick[0], [$client], [$server]);    
             }
         }
     }
 
-    private function admin($args$, $socket){
+    private function admin($args, $socket){
         switch(strtolower($args[0])){
             case $adminCommands[0]:    //Create
                 if(count($args < 4)){
@@ -150,7 +153,7 @@ class Game{
                 break;
 
             case $adminCommands[5]:  //Ping
-                send("Ping", [$socket]);
+                send("Reping", [$socket]);
                 break;
             break;
 
@@ -163,28 +166,7 @@ class Game{
 
     private function player($args, $id, $socket){
         switch(strtolower($args[0])){
-            case $commandTypes[0]:  //Join
-                if(count($args) < 2){
-                    send("Error 11", [$socket]);
-                    return false;
-                }
-                if(count(array_filter($clients, function($client){   //Gra pełna
-                    return isset($client[0]) && $client[0] >=0 && $clients[0] <= $maxPlayers - 1
-                })) >= $numOfPlayers){
-                    send("Error 30", [$socket]);
-                    return false;
-                }
-                if(empty($args[1])){
-                    send("Error 31", [$socket]);
-                    return false;
-                }
-
-                $clients[$socket] = [$availableIDs[0], $args[1]];  
-                array_slice($availableIDs, 0, 1); 
-                $read = $clients;
-                break;
-
-            case $commandTypes[1]:  //Put
+            case $commandTypes[0]:  //Put
                     if(count($args) < 4){
                         send("Error 11", [$socket]);
                         return false;
@@ -201,14 +183,17 @@ class Game{
                     $this->incrementTurn();
                 break;
 
-            case $commandTypes[2]:  //Leave
+            case $commandTypes[1]:  //Leave
                 unset($clients[$socket]);
                 if($id >= 0) $availableIDs[] = $id;
                 $read = $clients;
                 break;
 
-            case $commandTypes[3]:  //Ping
+            case $commandTypes[2]:  //Ping
                 send("Reping", [$socket]);
+                break;
+
+            case $commandTypes[3]:  //Reping
                 break;
 
             default:
@@ -218,69 +203,21 @@ class Game{
         }
     }
 
+    function join($socket, $nick){
+        if(count(array_filter($clients, function($client){   //Gra pełna
+            return isset($client[0]) && $client[0] >=0 && $client[0] <= $maxPlayers - 1
+        })) >= $numOfPlayers){
+            return false;
+        }
+        if(empty($nick) || $nick === false) return false;
+
+        $clients[$socket] = [$availableIDs[0], $nick];  
+        array_slice($availableIDs, 0, 1); 
+        $read = $clients;
+    }
+
     private function incrementTurn(){
         $this->turn = $this->turn > $numOfPlayers - 1 ? 0 : $this->turn + 1;
-    }
-
-
-    function encodeMessage($message) {
-        $length = strlen($message);
-    
-        if ($length <= 125) {
-            return chr(129) . chr($length) . $message;
-        } 
-        elseif ($length <= 65535) {
-            return chr(129) . chr(126) . pack('n', $length) . $message;
-        } 
-        else return chr(129) . chr(127) . pack('J', $length) . $message;
-    }
-
-    function decodeMessage($data) {
-        $length = ord($data[1]) & 127;
-    
-        if ($length === 126) {
-            $masks = substr($data, 4, 4);
-            $payloadOffset = 8;
-        } 
-        elseif ($length === 127) {
-            $masks = substr($data, 10, 4);
-            $payloadOffset = 14;
-        } 
-        else {
-            $masks = substr($data, 2, 4);
-            $payloadOffset = 6;
-        }
-    
-        $payload = substr($data, $payloadOffset);
-        $decoded = '';
-    
-        for ($i = 0; $i < strlen($payload); $i++) 
-            $decoded .= $payload[$i] ^ $masks[$i % 4];
-    
-        if(empty($decoded) || $decoded = "") return false;
-        $this->args = explode($decoded);
-        if(count($this->args) < 1 || !in_array(strtolower($this->args[0]), $this->commandTypes)) return false;
-        return $args;
-    }
-
-    function handshake($newClient){
-        $request = socket_read($newClient, 5000);
-        preg_match('#Sec-WebSocket-Key: (.*)\r\n#', $request, $matches);
-        $key = base64_encode(pack('H*', sha1($matches[1] . '258EAFA5-E914-47DA-95CA-C5AB0DC85B11')));
-        $headers = "HTTP/1.1 101 Switching Protocols\r\n";
-        $headers .= "Upgrade: websocket\r\n";
-        $headers .= "Connection: Upgrade\r\n";
-        $headers .= "Sec-WebSocket-Version: 13\r\n";
-        $headers .= "Sec-WebSocket-Accept: $key\r\n\r\n";
-        socket_write($newClient, $headers, strlen($headers));
-    }
-    
-    function send($txt, $sockets, $skip = []){ 
-        $message = encodeMessage($txt);
-        foreach($sockets as $socket){
-            if($socket !== $server && !in_array($socket, $skip))
-                socket_write($socket, $message);
-        }
     }
 
     function getPort(){ return $this->port;}
@@ -289,5 +226,6 @@ class Game{
     function getTurn(){ return $this->turn;}
     function getPaused(){ return $this->paused;}
     function getMaxPlayers(){ return $this->maxPlayers;}
+    function getSocket(){ return $this->$server;}
 }
 ?>

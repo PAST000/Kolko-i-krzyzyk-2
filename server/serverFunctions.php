@@ -1,22 +1,25 @@
 <?php
-const $commandTypes = [
-    "join", "put", "leave", "ping", "reping"
-];
-
-const $adminCommands = [
-    "create", "drop", "kick", "pause", "unpause", "ping", "reping"
-];
+function readMessage($socket){
+    $data = socket_read($socket, 6);
+    if(is_numeric($data)) $data = socket_read($socket, (int)$data);
+    else $data .= socket_read($socket, 4090); //Domyślnie odczytujemy 4096 bajtów, z czego 6 już odczytaliśmy
+    
+    if($data === false || $data === "") return false;
+    return decodeMessage($data);
+}
 
 function encodeMessage($message) {
     $length = strlen($message);
+    $message = ltrim($message);  //WAŻNE! usuwamy spacje na początku
+    $message = rtrim($message);
 
     if ($length <= 125) {
         return chr(129) . chr($length) . $message;
-    } elseif ($length <= 65535) {
+    } 
+    elseif ($length <= 65535) {
         return chr(129) . chr(126) . pack('n', $length) . $message;
-    } else {
-        return chr(129) . chr(127) . pack('J', $length) . $message;
-    }
+    } 
+    else return chr(129) . chr(127) . pack('J', $length) . $message;
 }
 
 function decodeMessage($data) {
@@ -25,10 +28,12 @@ function decodeMessage($data) {
     if ($length === 126) {
         $masks = substr($data, 4, 4);
         $payloadOffset = 8;
-    } elseif ($length === 127) {
+    } 
+    elseif ($length === 127) {
         $masks = substr($data, 10, 4);
         $payloadOffset = 14;
-    } else {
+    } 
+    else {
         $masks = substr($data, 2, 4);
         $payloadOffset = 6;
     }
@@ -36,18 +41,15 @@ function decodeMessage($data) {
     $payload = substr($data, $payloadOffset);
     $decoded = '';
 
-    for ($i = 0; $i < strlen($payload); $i++) {
+    for ($i = 0; $i < strlen($payload); $i++) 
         $decoded .= $payload[$i] ^ $masks[$i % 4];
-    }
 
-    if(empty($decoded) || $decoded = ""){
-        return false;
-    }
+    if(empty($decoded) || $decoded = "") return false;
+    $data = ltrim($data);   //WAŻNE! usuwamy spacje na początku
+    $data = rtrim($data);
 
     $this->args = explode($decoded);
-    if(count($this->args) < 1 || !in_array(strtolower($this->args[0]), $this->commandTypes)){
-        return false;
-    }
+    if(count($this->args) < 1 || !in_array(strtolower($this->args[0]), $this->commandTypes)) return false;
     return $args;
 }
 
@@ -65,9 +67,21 @@ function handshake($newClient){
 
 function send($txt, $sockets, $skip = []){ 
     $message = encodeMessage($txt);
-    foreach($sockets as $socket){
-        if($socket !== $server && !in_array($socket, $skip))
-            socket_write($socket, $message);
+    $len = encodeLength((string)strlen($message));
+
+    foreach($sockets as $socket) 
+        if($socket !== $server && !in_array($socket, $skip)) 
+            socket_write($len . "  " . $socket, $message);
+}
+
+function encodeLength($txt){
+    $len = strlen($txt);
+    $encoded = "";
+
+    for($i = 1; $i <= $maxMessLen; $i++){
+        if($i > $len) $encoded = "0" . $encoded;
+        else $encoded = $len[$len - $i] . $encoded;
     }
+    return $encoded;
 }
 ?>
