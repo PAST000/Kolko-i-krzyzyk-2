@@ -1,4 +1,6 @@
 <?php 
+require "direction.php";
+
 class Board{
     private $board = [];    // Tablica z postawionymi pionkami, puste pole - null
     private $dims = 3;      // Liczba wymiarów
@@ -6,7 +8,15 @@ class Board{
     private $sizesMult = 1; // Przemnożone rozmiary
     private $target = 3;    // Zwycięzka ilość w jednej linii
     private $dirs = [];
-    private const $pawns = ['O', 'X', 'P']; // Kula, krzyżyk, piramida
+    private const pawns = ['O', 'X', 'P']; // Kula, krzyżyk, piramida
+
+    function initDirs(){
+        $dir = new Direction($this->dims);
+        for($i = 0; $i < pow(3, $this->dims) - 1; $i++){
+            $this->dirs[$i] = $dir;
+            $dir->increment();
+        }
+    }
 
     function __construct($sizesArr, $trg){
         if(count($sizesArr) < 2)
@@ -26,16 +36,10 @@ class Board{
             $this->sizesMult *= $this->sizes[$i];
         for ($i = 0; $i < $this->sizesMult; $i++) 
             $this->board[$i] = null;
-        initDirs();
+        $this->initDirs();
     }
 
-    function initDirs(){
-        $dir = new Direction($this->dims);
-        for($i = 0; $i < pow(3, $this->dims) - 1; $i++){
-            $this->dirs[$i] = $dir;
-            $dir->increment();
-        }
-    }
+    function __destruct(){}
 
     function put($v, $pawn){ 
         $id = arrToId($v);
@@ -82,7 +86,7 @@ class Board{
     function isInRange($id, $n){ //n - indeks kierunków
         if($id < 0 || $id >= count($this->board)) return false;
         $v = idToArr($id);
-        for($i = 0; $i < $this->dims: i++){
+        for($i = 0; $i < $this->dims; $i++){
             $v[$i] += $this->target*($this->dirs[$n][$i]);
             if($v[$i] < 0 || $v[$i] >= $this->sizes[$i])
                 return false;
@@ -137,38 +141,6 @@ class Board{
 
     function implode($separator = ','){
         return implode($separator, $this->board);
-    }
-}
-
-class Direction{
-    private $arr = [];
-    private $size;
-
-    function __construct($n){
-        for($i = 0; $i < $n; $i++){
-            $this->arr[$i] = -1;
-        }
-        $this->size = $n;
-    }
-
-    function increment(){
-        for($i = $this->size; $i >=0; $i--){
-            if($this->arr[$i] === 1){
-                $this->arr[$i] = -1;
-            }
-            else{
-                $this->arr[$i] += 1;
-                break;
-            }
-        }
-
-        for($i = 0; $i <= $this->size; $i++){  //Sprawdzenie czy same 0
-            if($this->arr[$i] !== 0) 
-                break;
-            else    
-                if($i === $this->size)
-                    $this->arr[$i] += 1;
-        }
     }
 }
 ?>

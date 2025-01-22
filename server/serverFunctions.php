@@ -1,17 +1,52 @@
 <?php
+const delimeter = " ";  // Separator do explode() i implode()
+const commandTypes = [
+    "join", "create", "ping", "reping"
+];
+
 function readMessage($socket){
-    $data = socket_read($socket, 6);
-    if(is_numeric($data)) $data = socket_read($socket, (int)$data);
-    else $data .= socket_read($socket, 4090); //Domyślnie odczytujemy 4096 bajtów, z czego 6 już odczytaliśmy
-    
-    if($data === false || $data === "") return false;
-    return decodeMessage($data);
+    try{ 
+        $data = socket_read($socket, 2);  // Pobieramy samą długość
+        if($data === false || $data === "") return false;
+        $payloadLength = ord($data[1]) & 127;  // Długość SAMEGO payload'u
+        $offset = 6;
+        $masks;
+
+        if($payloadLength === 126){   // Jeśli 126 to kolejne 2 bajty to faktyczna długość payload'u
+            $data .= socket_read($socket, 2); 
+            $payloadLength = ord($data[0])*256 + ord($data[1]);
+            $offset = 8;
+        }       
+        else if($payloadLength === 127){   // Jeśli 127 to kolejne 8 bajtów to faktyczna długość payload'u
+            $data .= socket_read($socket, 8);
+            $payloadLength = (ord($data[0]) << 56) | (ord($data[1]) << 48) | (ord($data[2]) << 40) | (ord($data[3]) << 32) |
+                            (ord($data[4]) << 24) | (ord($data[5]) << 16) | (ord($data[6]) << 8)  |  ord($data[7]);
+            $offset = 14;
+        }  
+
+        $data .= socket_read($socket, $payloadLength + 4);  // 4 bajty na maskę
+        $masks = substr($data, $offset - 4, 4);
+
+        $payload = substr($data, $offset);
+        $decoded = '';
+
+        for ($i = 0; $i < strlen($payload); $i++) 
+            $decoded .= $payload[$i] ^ $masks[$i % 4];
+
+        if(empty($decoded) || $decoded === "") return false;
+        $decoded = trim($decoded);   // Usuwamy puste znaki na początku
+
+        $args = explode(delimeter, $decoded);
+        if(count($args) < 1 || !in_array(strtolower($args[0]), commandTypes)) return false;
+        return $args;
+    }
+    catch(Exception $e){ return false; }
+    return false;  // Jeśli dotarliśmy do tego momentu to coś jest nie tak
 }
 
 function encodeMessage($message) {
+    $message = trim($message);  // Usuwamy spacje na początku
     $length = strlen($message);
-    $message = ltrim($message);  //WAŻNE! usuwamy spacje na początku
-    $message = rtrim($message);
 
     if ($length <= 125) {
         return chr(129) . chr($length) . $message;
@@ -20,37 +55,6 @@ function encodeMessage($message) {
         return chr(129) . chr(126) . pack('n', $length) . $message;
     } 
     else return chr(129) . chr(127) . pack('J', $length) . $message;
-}
-
-function decodeMessage($data) {
-    $length = ord($data[1]) & 127;
-
-    if ($length === 126) {
-        $masks = substr($data, 4, 4);
-        $payloadOffset = 8;
-    } 
-    elseif ($length === 127) {
-        $masks = substr($data, 10, 4);
-        $payloadOffset = 14;
-    } 
-    else {
-        $masks = substr($data, 2, 4);
-        $payloadOffset = 6;
-    }
-
-    $payload = substr($data, $payloadOffset);
-    $decoded = '';
-
-    for ($i = 0; $i < strlen($payload); $i++) 
-        $decoded .= $payload[$i] ^ $masks[$i % 4];
-
-    if(empty($decoded) || $decoded = "") return false;
-    $data = ltrim($data);   //WAŻNE! usuwamy spacje na początku
-    $data = rtrim($data);
-
-    $this->args = explode($decoded);
-    if(count($this->args) < 1 || !in_array(strtolower($this->args[0]), $this->commandTypes)) return false;
-    return $args;
 }
 
 function handshake($newClient){
@@ -67,21 +71,8 @@ function handshake($newClient){
 
 function send($txt, $sockets, $skip = []){ 
     $message = encodeMessage($txt);
-    $len = encodeLength((string)strlen($message));
-
     foreach($sockets as $socket) 
-        if($socket !== $server && !in_array($socket, $skip)) 
-            socket_write($len . "  " . $socket, $message);
-}
-
-function encodeLength($txt){
-    $len = strlen($txt);
-    $encoded = "";
-
-    for($i = 1; $i <= $maxMessLen; $i++){
-        if($i > $len) $encoded = "0" . $encoded;
-        else $encoded = $len[$len - $i] . $encoded;
-    }
-    return $encoded;
+        if(!in_array($socket, $skip)) 
+            socket_write($socket, $message);
 }
 ?>
