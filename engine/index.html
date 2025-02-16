@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>3D engine test</title>
+    <style>
+        body, html{
+            margin: 0;
+        }
+
+        canvas{
+            width: 1000px;
+            height: 800px;
+            display: block;
+            border: 1px solid black;
+            margin: 10px;
+        }
+    </style>
+    <script type="module">
+        import Engine from "./Engine.js";
+        import Board from "./Objects/Board.js";
+        import Vertex from "./Objects/Vertex.js";
+
+        const canvas = document.getElementById("cnv");
+        const board = new Board(canvas, 1000, 800, 4, 5, 6, 80, 15);
+        board.addPawn("cube", [0,0,0]);
+        board.addPawn("sphere", [0,0,1]);
+        board.addPawn("cross", [0,1,0]);
+        board.addPawn("cuboid", [1,0,0]);
+        board.addPawn("cone", [1,1,1]);
+        board.draw();
+    </script>
+</head>
+<body>
+    <canvas id="cnv"></canvas>
+</body>
+</html>
