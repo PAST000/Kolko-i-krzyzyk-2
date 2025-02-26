@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<style>
+    #modalWrapper{
+        border: 5px solid black;
+        border-radius: 10px;
+        padding: 20px;
+        padding-top: 10px;
+        width: 25%;
+        background-color: rgb(101, 208, 250);
+        margin: auto;
+        margin-top: 30vh;
+    }
+    input{
+        float: right;
+        box-sizing: border-box;
+        width: 55%;
+    }
+
+    #close{
+        float: right;
+        background-color: transparent;
+        font-weight: bold;
+        font-size: 22px;
+        border: 0;
+    }
+
+    label{
+        font-weight: bold;
+        font-size: large;
+        color: rgb(58, 58, 58);
+    }
+
+    #start{
+        margin-left: 35%;
+        background-color: transparent;
+        border: 2px solid black;
+        box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
+        border-radius: 3px;
+        margin-top: 10px;
+        padding: 6px;
+        font-weight: bold;
+        width: 30%;
+        min-width: 70px;
+        text-align: center;
+        font-size: 16px;
+    }
+
+    input{
+        padding: 3px;
+        font-size: medium;
+    }
+
+    #dimsContainer{
+        width: 100%;
+        height: 100%;
+        background-color: transparent;
+        margin-top: 15px;
+    }
+
+    #dimsContainer::after{
+        clear: both;
+    }
+
+    .dimWrapper{
+        width: 100%;
+        margin-bottom: 15px;
+    }
+</style>
+
+<html lang="pl">
+<head>
+    <meta charset="utf-8">
+</head>
+
+<section id="modalWrapper">
+    <button id="close">&times</button><br>
+
+    <section id="dimsContainer">
+        <div class="dimWrapper">
+            <label for="dims">Wymiary: </label>
+            <input type="number" id="dims" name="dims" value="3" min="2" max="6" onchange="changeDims()">
+        </div>
+        <div class="dimWrapper" id="x">
+            <label for="width">Szerokość (X): </label>
+            <input type="number" id="width" name="width" value="4" min="2" max="15">
+        </div>
+        <div class="dimWrapper" id="y">
+            <label for="height">Wysokość (Y): </label>
+            <input type="number" id="height" name="height" value="4" min="2" max="15">
+        </div>
+        <div class="dimWrapper" id="z">
+            <label for="depth">Długość (Z): </label>
+            <input type="number" id="depth" name="depth" value="4" min="2" max="15">
+        </div>
+    </section>
+
+    <button id="start">Rozpocznij</button>
+</section>
+</html>
+
+<script>
+    document.getElementById("close").onclick = function() {
+        window.parent.postMessage("closeLocal", "*"); 
+    };
+
+    const dimsInput =  document.getElementById("dims");
+    let dims = 3;
+
+    function changeDims(){
+        if(dimsInput.value < dims){
+            dims--;
+            dimsInput.value = dims;  // Zabezpieczenie przed zmianą o np. dwa pola w dół na raz
+            document.getElementById(dims == 2 ? "z" : dims + 1).remove();  // Już odjęliśmy 1
+        }
+        else if(dimsInput.value > dims){
+            dims++;
+            dimsInput.value = dims; // Zabezpieczenie przed zmianą o np. dwa pola w górę na raz
+
+            const wrapper = document.createElement("div");
+            const label = document.createElement("label");
+            const input = document.createElement("input");
+            const txt = document.createTextNode(
+                dims == 2 ? "Wysokość (Y): " : dims == 3 ? "Długość (Z): " : ("Wymiar " + dims + ": ") 
+            );
+
+            wrapper.classList.add("dimWrapper");
+            wrapper.id = dims == 2 ? "y" : dims == 3 ? "z" : dims;
+            label.for = dims == 2 ? "height" : dims == 3 ? "depth" : ("dim" + dims);
+            input.type="number";
+            input.id = "dim" + dims;
+            input.name = "dim" + dims;
+            input.value = "4";
+            input.min = "2";
+            input.max = "15";
+
+            label.appendChild(txt);
+            wrapper.appendChild(label);
+            wrapper.appendChild(input);
+
+            document.getElementById("dimsContainer").appendChild(wrapper);
+        }
+    }
+</script>

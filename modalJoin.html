@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<style>
+    #modalWrapper{
+        border: 5px solid black;
+        border-radius: 10px;
+        padding: 20px;
+        padding-top: 10px;
+        width: 25%;
+        background-color: rgb(101, 208, 250);
+        margin: auto;
+        margin-top: 30vh;
+    }
+    #modalWrapper > input{
+        width: 100%;
+        box-sizing: border-box;
+        margin-bottom: 10px;
+    }
+
+    #close{
+        float: right;
+        background-color: transparent;
+        font-weight: bold;
+        font-size: 22px;
+        border: 0;
+    }
+
+    #modalWrapper > label{
+        font-weight: bold;
+        font-size: large;
+        margin-left: 10px;
+        color: rgb(58, 58, 58);
+    }
+
+    #join{
+        margin-left: 40%;
+        background-color: transparent;
+        border: 2px solid black;
+        box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
+        border-radius: 3px;
+        margin-top: 10px;
+        padding: 6px;
+        font-weight: bold;
+        width: 20%;
+        min-width: 70px;
+        text-align: center;
+        font-size: 16px;
+    }
+
+    input{
+        padding: 3px;
+        font-size: medium;
+    }
+</style>
+
+<html lang="pl">
+<head>
+    <meta charset="utf-8">
+</head>
+
+<section id="modalWrapper">
+    <button id="close">&times</button><br>
+    <label for="address">Adres:</label><br>
+    <input type="text" id="address" name="address"><br>
+    <label for="port">Port:</label><br>
+    <input type="text" id="port" name="port"><br>
+    <label for="nick">Nick:</label><br>
+    <input type="text" id="nick" name="nick"><br>
+    <button id="join">Dołącz</button>
+</section>
+</html>
+
+<script>
+    document.getElementById("close").onclick = function() {
+        window.parent.postMessage("closeJoin", "*"); 
+    };
+</script>

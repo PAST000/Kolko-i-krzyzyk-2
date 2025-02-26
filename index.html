@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="description" content="Kółko i krzyżyk 2">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Access-Control-Allow-Origin" content="modalLocal.html">
+
+    </meat>
+    <link rel="icon" type="image/x-icon" href="resources/icon.ico">
+    <title>Kółko i krzyżyk 2</title>
+    <link rel="stylesheet" href="style.css">
+
+</head>
+<body>
+    <header>
+        <img src="resources/ikona2.png" alt="Nie udało się załadować ikony">
+        <h1>Kółko i krzyżyk 2</h1>
+    </header>
+    <main>
+        <nav>
+            <button>Button1</button> 
+            <div class="line"></div>
+            <button>Button2</button> 
+            <div class="line"></div>
+            <button>Button3</button> 
+        </nav>
+        <article>
+            <section class="buttonsContainer">
+                <div class="buttonWrapper">
+                    <button id="localButton" onclick="openLocal()">Gra na tym urządzeniu</button>
+                </div>
+                <div class="buttonWrapper">
+                    <button id="joinButton">Dołącz do gry wieloosobowej</button>
+                </div>
+                <div class="buttonWrapper">
+                    <button id="hostButton">Utwórz grę</button>
+                </div>
+                <div class="buttonWrapper">
+                    <button id="computerButton">Gra z komputerem</button>
+                </div>
+            </section> 
+        </article>
+    </main>
+    <footer>
+        Adam Stachowicz 2024
+    </footer>
+    <div id="localWrapper">
+        <iframe src="modalLocal.html" title="local"></iframe>
+    </div>
+    <div id="joinWrapper">
+        <iframe src="modalJoin.html" title="join"></iframe>
+    </div>
+    <div id="hostWrapper">
+        <iframe src="modalHost.html" title="local"></iframe>
+    </div>
+    <div id="computerWrapper">
+        <iframe src="modalComputer.html" title="computer"></iframe>
+    </div>
+</body>
+</html>
+
+<script>
+    document.getElementById("localButton").onclick = function(){ document.getElementById("localWrapper").style.display = "block"; };
+    document.getElementById("joinButton").onclick = function(){ document.getElementById("joinWrapper").style.display = "block"; };
+    document.getElementById("hostButton").onclick = function(){ document.getElementById("hostWrapper").style.display = "block"; };
+    document.getElementById("computerButton").onclick = function(){ /*document.getElementById("computerWrapper").style.display = "block";*/ };
+
+    window.addEventListener("message", function(event) {
+        if (event.data === "closeLocal") document.getElementById("localWrapper").style.display = "none"; 
+        if (event.data === "closeJoin") document.getElementById("joinWrapper").style.display = "none"; 
+        if (event.data === "closeHost") document.getElementById("hostlWrapper").style.display = "none"; 
+        if (event.data === "closeComputer") document.getElementById("computerWrapper").style.display = "none"; 
+    });
+</script>
