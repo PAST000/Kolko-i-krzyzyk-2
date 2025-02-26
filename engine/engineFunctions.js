@@ -2,15 +2,10 @@ import Vertex, {Vertex2D} from "./Objects/Vertex.js";
 import Plane from "./Objects/Plane.js";
 
 export function withinQuad(A, B, C, D, P){  // Sprawdzamy, czy punkt znajduje się w czworokącie. WAŻNE! A,B,C i D muszą być KOLEJNYMI wierzchołkami (A i C nie mogą leżeć na tym samym boku)
-    if(!(A instanceof Vertex2D && B instanceof Vertex2D && C instanceof Vertex2D && D instanceof Vertex2D && P instanceof Vertex2D)) {
-        console.log("errpr");
-        return false;
-    }
+    if(!(A instanceof Vertex2D && B instanceof Vertex2D && C instanceof Vertex2D && D instanceof Vertex2D && P instanceof Vertex2D)) return false;
 
     var quadArea = det(A, B, C, true) + det(A, C, D, true);  // Pomijamy mnożenie przez 1/2
     var PArea = det(P, A, B, true) + det(P, B, C, true) + det(P, C, D, true) + det(P, D, A, true);
-    //return( sameSide(A, B, P, D) && sameSide(B, C, P, A) && sameSide(C, D, P, B) && sameSide(D, A, P, C) );
-    //console.log(quadArea, PArea, P);
     return quadArea >= PArea;
 }
 
@@ -20,14 +15,15 @@ export function det(A, B, C, abs = false){  // Wyznacznik między wektorami AB i
     return (B.x - A.x)*(C.y - A.y) - (B.y - A.y)*(C.x - A.x);
 }
 
-export function Project(faces, fov = Number.MAX_SAFE_INTEGER){
+export function Project(faces){
     if(faces.length == 0) return;
     var arr = [];
     var projection = []; // Pojekcja pojedynczej ściany
 
     if(faces[0] instanceof Plane){
         for(var i = 0; i < faces.length; i++){
-            for(var j = 0; j < faces[i].vertices.length; j++) projection.push(faces[i].vertices[j].project(fov));
+            for(var j = 0; j < faces[i].vertices.length; j++) 
+                projection.push(faces[i].vertices[j].project());
             arr.push(projection);
             projection = [];
         }
@@ -36,7 +32,7 @@ export function Project(faces, fov = Number.MAX_SAFE_INTEGER){
 
     for(var i = 0; i < faces.length; i++){
         for(var j = 0; j < faces[i].length; j++)
-            projection.push(new Vertex2D((fov * faces[i][j].x) / (fov + faces[i][j].z), (fov * faces[i][j].y) / (fov + faces[i][j].z)));
+            projection.push(faces[i][j].project());
         arr.push(projection);
         projection = [];
     }

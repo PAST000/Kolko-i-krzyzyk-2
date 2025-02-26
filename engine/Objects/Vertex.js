@@ -5,9 +5,24 @@ export default class Vertex{
         this.z = parseFloat(Z);
     }
 
-    cast2D(){ return new Vertex2D(this.x, this.y); }
-    //project(fov = Number.MAX_SAFE_INTEGER){ return new Vertex2D((fov * this.x) / (fov + this.z), (fov * this.y) / (fov + this.z)); }
+    length(){ return Math.sqrt(this.x*this.x + this.y*this.y + this.z*this.z); }
     project(){ return new Vertex2D(this.x, this.y); }
+
+    dot(other){ 
+        if(!other instanceof Vertex) return false;
+        return this.x * other.x + this.y * other.y + this.z * other.z;
+    }
+    crossVec(other){
+        if(!other instanceof Vertex) return false;
+        return new Vertex(this.y*other.z - this.z*other.y, 
+                          this.z*other.x - this.x*other.z,
+                          this.x*other.y - this.y*other.x
+                         );
+    }
+    crossLen(other){
+        if(!other instanceof Vertex) return false;
+        return this.crossVec(other).length();
+    }
 };
 
 export class Vertex2D{

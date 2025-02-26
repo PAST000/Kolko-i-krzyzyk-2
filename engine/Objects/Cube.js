@@ -1,8 +1,9 @@
-import Vertex from "./Vertex.js";
+import Vertex, {Vertex2D} from "./Vertex.js";
 import Color from "./Color.js";
+import { withinQuad } from "../engineFunctions.js";
 
 export default class Cube{
-    constructor(cntr, len, fillClr = new Color(0, 0, 20, 0.5), lineClr = new Color(0, 0, 30, 0.7), lineWdt = 0.4){
+    constructor(cntr, len, fillClr = new Color(0, 0, 20, 0.4), lineClr = new Color(0, 0, 30, 0.6), lineWdt = 0.4){
         this.center = cntr;
         this.length = parseFloat(len);
         this.fillColor = fillClr;
@@ -30,7 +31,19 @@ export default class Cube{
         ];
     }
 
-    changeFillColor(fillColor){ this.fill = fillColor; }
+    changeFillColor(fillClr){ this.fillColor = fillClr; }
     changeLineColor(lineClr){ this.lineColor = lineClr; }
     changeLineWidth(width){ this.lineWidth = width; }
+
+    checkClick(P){
+        if(P instanceof Vertex) P = P.project();
+        if(!P instanceof Vertex2D) return false;
+
+        for(let i = 0; i < this.faces.length; i++){
+            if(withinQuad(this.faces[i][0].project(), this.faces[i][1].project(), 
+                          this.faces[i][2].project(), this.faces[i][3].project(), P))
+                return true;
+        }
+        return false;
+    }
 };

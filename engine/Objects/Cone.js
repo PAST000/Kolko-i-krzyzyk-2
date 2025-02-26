@@ -8,7 +8,7 @@ export default class Cone {
         this.radius = parseFloat(rad);
         this.height = parseFloat(height);
         this.precision = parseFloat(precision);
-        this.fill = fillColor;
+        this.fillColor = fillColor;
         this.lineColor = lineClr;
         this.lineWidth = lineWdt;
 
