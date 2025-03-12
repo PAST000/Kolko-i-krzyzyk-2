@@ -12,26 +12,25 @@ import Cone from "./Objects/Cone.js";
 export default class Engine{
     #cnv; 
     #ctx;
-    #keys = []; // Wciśniete klawisze
+    #keys = [];  // Wciśniete klawisze
     #objects;
+    projections = [];
+    vertices = [];    // Do obracania
 
     constructor(canvas, width, height, objs = [], cntr = null, sens = 4, prec = 7){
         this.#cnv = canvas;
-        this.#cnv.width = width;
-        this.#cnv.height = height;
+        this.#cnv.width = this.#cnv.clientWidth;
+        this.#cnv.height = this.#cnv.clientHeight;
         this.#ctx = this.#cnv.getContext("2d");
 
-        this.#objects = objs;
-        this.projections = [];
-        this.vertices = [];   // Do obracania
-
+        this.#objects = [...objs];
         this.center = (cntr === null ? new Vertex(width/2, height/2, 0) : cntr);
         this.sensitivity = sens;
         this.sensitivityFactor = 1.1;  // Współczynnik czułości dla sztrałek
         this.precision = prec;
-        this.defaultFillColor = new Color(0, 0, 100, 0.12);
-        this.defaultLineColor = new Color(0, 0, 100, 0.1);
-        this.defaultLineWidth = 0.3;
+        this.defaultFillColor = new Color(0, 0, 90, 0.12);
+        this.defaultLineColor = new Color(0, 0, 100, 0.12);
+        this.defaultLineWidth = 1;
 
         this.mouseDown = false;
         this.mouseX = 0;   // Koordynaty w których kliknięto mysz
@@ -68,6 +67,7 @@ export default class Engine{
         document.addEventListener("mouseup", this.#mouseStop.bind(this));
         document.addEventListener("keydown", (e) => {
             if(e.ctrlKey) return;
+
             if (!this.#keys[e.code]) {
                 this.#keys[e.code] = true;
                 if (!this.isRotating) {
@@ -87,7 +87,7 @@ export default class Engine{
     }
 
     draw(){
-        this.#ctx.clearRect(0, 0, this.#cnv.width, this.#cnv.height);
+        this.#ctx.clearRect(0, 0, this.#cnv.offsetWidth, this.#cnv.offsetHeight);
 
         for(let i = 0; i < this.#objects.length; i++){
             if(!(this.#objects[i] instanceof Array))
@@ -100,6 +100,7 @@ export default class Engine{
             this.setStyle(this.#objects[i].fillColor === undefined ? this.defaultFillColor : this.#objects[i].fillColor, 
                           this.#objects[i].lineColor === undefined ? this.defaultLineColor : this.#objects[i].lineColor,
                           this.#objects[i].lineWidth === undefined ? this.defaultLineWidth : this.#objects[i].lineWidth);
+            //this.setStyle(this.defaultFillColor, this.lineColor, this.lineWidth);
 
             for(let j = 0; j < this.projections.length; j++){
                 this.#ctx.beginPath();
@@ -198,10 +199,15 @@ export default class Engine{
     }
 
 
-    setStyle(fillColor = new Color(0, 0, 20, 0.5), lineColor = new Color(0, 0, 30, 0.7), width = this.defaultLineWidth){
+    setStyle(fillColor = this.defaultFillColor, lineColor = this.defaultLineColor, lineWidth = this.defaultLineWidth){
         if(fillColor instanceof Color) this.#ctx.fillStyle = fillColor.toString();
-        if(fillColor instanceof Color) this.#ctx.strokeStyle = lineColor.toString();
-        if(fillColor instanceof Color) this.#ctx.lineWidth = width.toString();
+        if(lineColor instanceof Color) this.#ctx.strokeStyle = lineColor.toString();
+        if(lineWidth instanceof Number) this.#ctx.lineWidth = lineWidth.toString();
+    }
+
+    updateCenter(){
+        this.center = new Vertex(this.#cnv.width/2, this.#cnv.height/2, 0);
+        this.draw();
     }
 
     checkType(obj) {

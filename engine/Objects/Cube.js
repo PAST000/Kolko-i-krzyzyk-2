@@ -33,7 +33,7 @@ export default class Cube{
 
     changeFillColor(fillClr){ this.fillColor = fillClr; }
     changeLineColor(lineClr){ this.lineColor = lineClr; }
-    changeLineWidth(width){ this.lineWidth = width; }
+    changeLineWidth(width){ this.lineWidth = parseFloat(width); }
 
     checkClick(P){
         if(P instanceof Vertex) P = P.project();

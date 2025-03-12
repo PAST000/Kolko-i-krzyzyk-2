@@ -39,6 +39,14 @@ class ObjectsArr{
         return true;
     }
 
+    function pop(){
+        $this->first->pop();
+        $this->second->pop();
+    }
+
+    function setFirst($sec, $new){ $first[$this->idBySecond($sec)] = $new; }
+    function setSecond($frst, $new){ $second[$this->idByFirst($frst)] = $new; }
+
     function idByFirst($frst){ return array_search($frst, $this->first); }
     function idBySecond($sec){ return array_search($sec, $this->second); }
 

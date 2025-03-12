@@ -11,21 +11,22 @@ import PseudoSphere from "./Objects/PseudoSphere.js";
 import Cone from "./Objects/Cone.js";
 
 export default class Board{
-    #fields;
-    #vertices;
+    #fields = [];
+    #vertices = [];
+    #pawns = [];
 
-    constructor(canvas, cnvWidth, cnvHeight, X, Y, Z, size, prec, sens,
+    constructor(cnv, cnvWidth, cnvHeight, X, Y, Z, size, prec, sens,
                 fillClr = new Color(0, 0, 120, 0.2), lineClr = new Color(0, 0, 180, 0.2), lineWdt = 0.1, pawnClr = new Color(40, 40, 40, 0.35)){
-        this.length = parseFloat(size * X);
-        this.height = parseFloat(size * Y);
-        this.width = parseFloat(size * Z);
+        this.length = parseFloat(size * X);  //
+        this.height = parseFloat(size * Y);  // Wymiary planszy
+        this.width = parseFloat(size * Z);   //
         this.singleSize = parseFloat(size);
         this.precision = parseInt(prec);
         this.sensitivity = parseFloat(sens);
-        this.center = new Vertex(cnvWidth/2, cnvHeight/2, 0);
 
-        this.canvasWidth = parseFloat(cnvWidth);
-        this.canvasHeight = parseFloat(cnvHeight);
+        this.canvas = cnv;
+        this.canvasRect = this.canvas.getBoundingClientRect();
+        this.center = new Vertex(cnvWidth/2, cnvHeight/2, 0);
         this.X = X;
         this.Y = Y;
         this.Z = Z;
@@ -37,23 +38,16 @@ export default class Board{
         this.layerColor = new Color(220, 0, 0, 0.3);
         this.chosenColor = new Color(0, 220, 0, 0.4);
         
-        this.#vertices = [];
-        this.#fields = [];
-        this.layers = Array.from({ length: Z }, () => []);
+        this.#pawns = Array.from({ length: this.X*this.Y*this.Z });
+        this.layers = Array.from({ length: this.Z }, () => []);
         this.chosenLayer = -1; // -1 oznacza brak wybranej warstwy
         this.chosenField = -1; // -1 oznacza brak wybranego pola
-        this.pawns = [];
 
         this.#generateVertices();
         this.#generateFields();
 
-        canvas.addEventListener("mousedown", this.#mouseClick.bind(this));
-        canvas.addEventListener("contextmenu", function (event) {
-            if (this.chosenLayer >= 0) {
-                event.preventDefault();
-                return false; 
-            }
-        }, true);
+        this.canvas.addEventListener("mousedown", this.#mouseClick.bind(this));
+        this.canvas.addEventListener("contextmenu", (e) => { e.preventDefault(); });
         document.addEventListener("keydown", (e) => {
             if(this.chosenField < 0 || !(e.ctrlKey || e.shiftKey)) return;
             let cords = this.idToArr(this.chosenField);  // [x,y,z]
@@ -101,8 +95,8 @@ export default class Board{
             this.showField(this.chosenField);
             this.draw();
         });
-
-        this.engine = new Engine(canvas, this.canvasWidth, this.canvasHeight, [...this.#fields], this.center, this.sensitivity);
+        
+        this.engine = new Engine(cnv, cnvWidth, cnvHeight, [...this.#fields], this.center, this.sensitivity);
     }
 
     #generateVertices(){
@@ -131,31 +125,37 @@ export default class Board{
     addPawn(type, pos){
         if(!pos instanceof Array) return;
         if(pos.length < 3) return;
-        type.toLowerCase();
+        type = type.toLowerCase();
         let center = new Vertex(-this.singleSize*((this.X - 1)/2 - pos[0]),
                                 -this.singleSize*((this.Y - 1)/2 - pos[1]), 
                                 this.singleSize*((this.Z - 1)/2 - pos[2]));
+        let id = this.arrToId(pos);
 
         switch(type){
             case "cube":
-                this.engine.addObject(new Cube(center, this.singleSize * 0.75, this.pawnColor));
+                this.#pawns[id] = new Cube(center, this.singleSize * 0.75, this.pawnColor);
+                this.engine.addObject(this.#pawns[id]);
                 break;
 
             case "cuboid":
-                this.engine.addObject(new Cuboid(center, this.singleSize * 0.75, this.singleSize * 0.65, this.singleSize * 0.6, this.pawnColor));
+                this.#pawns[id] = new Cuboid(center, this.singleSize * 0.75, this.singleSize * 0.65, this.singleSize * 0.6, this.pawnColor);
+                this.engine.addObject(this.#pawns[id]);
                 break;
 
             case "cross":
-                this.engine.addObject(new Cross(center, this.singleSize * 0.85, this.pawnColor));
+                this.#pawns[id] = new Cross(center, this.singleSize * 0.85, this.pawnColor)
+                this.engine.addObject(this.#pawns[id]);
                 break;
 
             case "sphere":
             case "pseudosphere":
-                this.engine.addObject(new PseudoSphere(center, this.singleSize * 0.45, this.precision, this.pawnColor));
+                this.#pawns[id] = new PseudoSphere(center, this.singleSize * 0.45, this.precision, this.pawnColor);
+                this.engine.addObject(this.#pawns[id]);
                 break;
 
             case "cone":
-                this.engine.addObject(new Cone(center, this.singleSize * 0.45, this.singleSize * 0.8, this.precision, this.pawnColor));
+                this.#pawns[id] = new Cone(center, this.singleSize * 0.45, this.singleSize * 0.8, this.precision, this.pawnColor);
+                this.engine.addObject(this.#pawns[id]);
                 break;
             default: break;
         }
@@ -228,15 +228,18 @@ export default class Board{
             M.preventDefault();
             this.hideLayer(this.chosenLayer);
             this.chosenLayer = -1;
+            this.draw();
             return;
         }
 
+        let clientX = M.clientX - this.canvasRect.left;
+        let clientY = M.clientY - this.canvasRect.top;
         let clicked = [];
         let maxZ = new Cube(new Vertex(0,0, Number.MIN_SAFE_INTEGER), 0);
 
         for(let i = 0; i < this.#fields.length; i++)
             if(this.#fields[i] instanceof Cube)
-                if(this.#fields[i].checkClick( new Vertex2D(M.clientX - this.center.x, M.clientY - this.center.y))) 
+                if(this.#fields[i].checkClick( new Vertex2D(clientX - this.center.x, clientY - this.center.y))) 
                     clicked.push(i);
         if(clicked.length < 1) return;
 
@@ -265,9 +268,38 @@ export default class Board{
         this.draw();
     }
 
+    resize(){
+        this.canvas.width = this.canvas.offsetWidth;
+        this.canvas.height = this.canvas.offsetHeight;
+        this.center = new Vertex(this.canvas.width / 2, this.canvas.height / 2, 0);
+        this.canvasRect = this.canvas.getBoundingClientRect();
+        this.engine.updateCenter();
+    }
+
     setPrecision(prec){ 
         this.precision = parseInt(prec); 
         this.engine.setPrecision(this.precision);
+
+        for(let i = 0; i < this.#pawns.length; i++)
+            if(typeof(this.#pawns[i].precision) === "PseudoSphere")
+                this.#pawns[i] = new PseudoSphere(this.#pawns[i].center, this.#pawns[i].radius, this.precision, 
+                                                  this.#pawns[i].fillColor, this.#pawns[i].lineClr, this.#pawns[i].lineWidth);
+            else if(typeof(this.#pawns[i].precision) === "Cone")
+                this.#pawns[i] = new PseudoSphere(this.#pawns[i].center, this.#pawns[i].radius, this.#pawns[i].height, this.precision, 
+                                                  this.#pawns[i].fillColor, this.#pawns[i].lineClr, this.#pawns[i].lineWidth);
     }
+
     draw(){ this.engine.draw(); }
+
+    setFieldsStyle(fillClr, lineClr, width){
+        width = parseFloat(width);
+        if(!(fillClr instanceof Color) || !(lineClr instanceof Color) || typeof(width) !== "number") return false;
+        for(let i = 0; i < this.#fields.length; i++){
+            this.#fields[i].changeFillColor(fillClr);
+            this.#fields[i].changeLineColor(lineClr);
+            this.#fields[i].changeLineWidth(width);
+        }
+        this.engine.setStyle(fillClr, lineClr, width);
+        this.draw();
+    }
 };

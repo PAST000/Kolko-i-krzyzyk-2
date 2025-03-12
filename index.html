@@ -16,19 +16,19 @@
     <header>
         <img src="resources/ikona2.png" alt="Nie udało się załadować ikony">
         <h1>Kółko i krzyżyk 2</h1>
-    </header>
-    <main>
         <nav>
-            <button>Button1</button> 
+            <button>Jak grać</button> 
             <div class="line"></div>
-            <button>Button2</button> 
+            <button>Sterowanie</button> 
             <div class="line"></div>
             <button>Button3</button> 
         </nav>
+    </header>
+    <main>
         <article>
             <section class="buttonsContainer">
                 <div class="buttonWrapper">
-                    <button id="localButton" onclick="openLocal()">Gra na tym urządzeniu</button>
+                    <button id="localButton">Gra na tym urządzeniu</button>
                 </div>
                 <div class="buttonWrapper">
                     <button id="joinButton">Dołącz do gry wieloosobowej</button>
@@ -67,9 +67,11 @@
     document.getElementById("computerButton").onclick = function(){ /*document.getElementById("computerWrapper").style.display = "block";*/ };
 
     window.addEventListener("message", function(event) {
-        if (event.data === "closeLocal") document.getElementById("localWrapper").style.display = "none"; 
-        if (event.data === "closeJoin") document.getElementById("joinWrapper").style.display = "none"; 
-        if (event.data === "closeHost") document.getElementById("hostlWrapper").style.display = "none"; 
-        if (event.data === "closeComputer") document.getElementById("computerWrapper").style.display = "none"; 
+        if(event.data === "closeModal"){
+            document.getElementById("localWrapper").style.display = "none"; 
+            document.getElementById("joinWrapper").style.display = "none"; 
+            document.getElementById("hostWrapper").style.display = "none"; 
+            document.getElementById("computerWrapper").style.display = "none"; 
+        }
     });
 </script>

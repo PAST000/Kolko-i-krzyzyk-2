@@ -20,15 +20,22 @@
         import Board from "./Board.js";
         import Vertex from "./Objects/Vertex.js";
 
-        const canvas = document.getElementById("cnv");
-        const board = new Board(canvas, 1000, 800, 4, 4, 4, 80, 15, 4);
+        window.onload = function() {
+            const canvas = document.getElementById("cnv");
+            if (!canvas) {
+                console.error("Canvas not found!");
+                return;
+            }
 
-        /*board.addPawn("cube", [0,0,0]);
-        board.addPawn("sphere", [0,0,1]);
-        board.addPawn("cross", [0,1,0]);
-        board.addPawn("cuboid", [1,0,0]);
-        board.addPawn("cone", [1,1,1]);
-        board.draw();*/
+            const board = new Board(canvas, 1000, 800, 4, 4, 4, 80, 15, 4);
+
+            board.addPawn("cube", [0,0,0]);
+            board.addPawn("sphere", [0,0,1]);
+            board.addPawn("cross", [0,1,0]);
+            board.addPawn("cuboid", [1,0,0]);
+            board.addPawn("cone", [1,1,1]);
+            board.draw();
+        };
     </script>
 </head>
 <body>

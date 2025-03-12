@@ -1,21 +1,21 @@
 Do serwera:
-    -Join port nick
-    -Create numOfPlayers sizes[] target  //"Zwraca" port
+    -Create numOfPlayers sizes[] target  // "Zwraca" port
     -Ping/Reping
 
 Z serwera:
-    -Port port //"Zwrot" z Create
-    -Joined    //Udało się dołączyć do gry
+    -Port port  // "Zwrot" z Create
     -Error type txt
     -Ping/Reping
 
 Do gry:
     -Put cords[]
+    -Join nick
     -Leave 
     -Ping/Reping
 
 Z gry do serwera:
-    -Drop  //Koniec gry
+    -New port
+    -Drop     // Koniec gry
 
 Tylko admin:
     -Create numOfPlayers sizes[] target 
@@ -30,14 +30,14 @@ Z gry:
     -Error   type txt
     -Refresh players[](id => nick) board target turn(id) yourID
     -Won     name id 
-    -Joined  name id
+    -Joined  name id  // Brak argumentów oznacza potwierdzenie dołączenia
     -Left    name id
     -Closed
     -Kicked
     -Paused/Unpaused
     -Ping/Reping
 
-ids = ['O', 'X', 'P'] //Kula, krzyżyk, piramida
+ids = ['O', 'X', 'P']  // Kula, krzyżyk, piramida
 
 
 Typy błędów: 
@@ -59,14 +59,10 @@ Typy błędów:
 	31 Nie podano nicku lub błędny nick
 	32 Podano błędny port
 
-    4x Błąd przy tworzeniu serwera
+    4x Błąd przy tworzeniu gry
 	40 Błąd zwrócony z gry (Opis błędu jest 2. argumentem)
 	41 Serwer pełny
+	42 Błąd przy przydzielaniu portu
 
     9x Błędy administratorskie
 	90 Nie istnieje taki gracz
-
-Format:
-XXXXXX tresc
-  /\
-6-cyfrowa(ZAWSZE!) długość

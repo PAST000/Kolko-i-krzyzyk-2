@@ -1,134 +1,104 @@
 <?php
 require "game.php";
+register_shutdown_function('closeServer');
 
 $address = '0.0.0.0';
 $port = 3310;
-$gamePort = 33100;
+$gamePort = 49152;
 $freePorts = [];   // Porty które były używane, ale nie są obecnie
 
 $server = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+if (!$server) die("Błąd tworzenia gniazda: " . socket_strerror(socket_last_error()));
 socket_set_option($server, SOL_SOCKET, SO_REUSEADDR, 1);
-socket_bind($server, $address, $port);
+if (!socket_bind($server, $address, $port)) die("Błąd bindowania: " . socket_strerror(socket_last_error($server)));
 socket_set_nonblock($server);
 socket_listen($server);
 
 $clients = [$server];
 $read = [];
-$games = [];          // Port => Gra
-$gamesSockets = [];   // Port => Socket, nie łączymy z tablicą powyżej w celu przeszukiwania
-
-function close(){
-    foreach($games as $game) { $game->__destruct(); }
-    foreach($clients as $client) { 
-        send("Closed", [$client], [$server]);
-        if($client !== $server) socket_close($client);
-    }
-    socket_close($server);
-    exit();
-}
-register_shutdown_function('close');
+$games = [];         // Port => Socket
+$gamesSockets = [];  // Port => Socket, nie łączymy z tablicą powyżej w celu przeszukiwania
 
 while (true) {
     $read = $clients;
     $write = null;
     $except = null;
-
-    try{
-        socket_select($read, $write, $except, 0);
-    }
+    $errorCode = null;
+  
+    try{ socket_select($read, $write, $except, 0); }
     catch(Exception $e){ continue; }
 
     foreach ($read as $socket) {
-        if(!$socket && $socket !== $server){
-            file_put_contents("close.txt", "closed", FILE_APPEND);
-            array_slice($clients, array_search($socket, $clients), 1);
+        $errorCode = $socket ? socket_last_error($socket) : socket_last_error();
+        socket_clear_error($socket);
+        $errorMsg = socket_strerror($errorCode);
+        $logMessage = date("Y-m-d H:i:s",time()) . " - [$errorCode] $errorMsg\n";
+        file_put_contents("socket_errors.log", $logMessage, FILE_APPEND);                 // FILE LOG
+ 
+        if(!$socket && ($socket !== $server)){
+            unsetSocket($socket, $clients, $server);
             continue;
         } 
-
         if ($socket === $server) {   // Nowe połączenie
-            $newClient = socket_accept($server);
-            if(!$newClient) continue;
-            socket_set_nonblock($newClient);
-            $clients[] = $newClient;
-
-            $request = socket_read($newClient, 5000);
-            file_put_contents("requests.txt", $request, FILE_APPEND);
-            preg_match('#Sec-WebSocket-Key: (.*)\r\n#', $request, $matches);
-
-            if(!isset($matches[1])){
-                file_put_contents("close.txt", "NOTFOUND", FILE_APPEND);
-                continue;
-            }
-            $matches[1]= rtrim($matches[1], "\r\n");
-
-            $key = base64_encode(pack('H*', sha1($matches[1] . '258EAFA5-E914-47DA-95CA-C5AB0DC85B11')));
-            $headers = "HTTP/1.1 101 Switching Protocols\r\n";
-            $headers .= "Upgrade: websocket\r\n";
-            $headers .= "Connection: Upgrade\r\n";
-            $headers .= "Sec-WebSocket-Version: 13\r\n";
-            $headers .= "Sec-WebSocket-Accept: $key\r\n\r\n";
-            socket_write($newClient, $headers, strlen($headers));
+            handshake($server, $clients);
             continue;
         } 
 
         $args = readMessage($socket);
         if($args === false || empty($args) || $args === "" || !isset($args[0])) continue;
         
-        file_put_contents("messages.txt", implode(" ", $args), FILE_APPEND);
+        file_put_contents("messages.txt", implode(" ", $args), FILE_APPEND);               // FILE LOG
 
-        if(in_array($socket, $gamesSockets)){  //Wiadomość od gry
+        if(in_array($socket, $games)){  // Wiadomość od gry
             switch(strtolower($args[0])){
                 case "drop":
-                    $prt = array_search($socket, $gamesSockets);
-                    unset($games[$prt]);
-                    unset($gamesSocket[$prt]);
-                    $freePorts[] = $prt;
+                    $gamePort = array_search($socket, $games);
+                    unset($games[$gamePort]);
+                    $freePorts[] = $gamePort;
                     break;
             }
             continue;
         }
 
-        switch(strtolower($args[0])){
-            case commandTypes[0]:  //Join
-                if(!isset($args[1]) || !isset($games[$args[1]])){
-                    send("Error 32", [$socket]);
-                    break;
-                }
-                if(!$games[$args[1]]->join($socket, $args[2])){
-                    send("Error 31", [$socket]);
-                }
-
-                send("Joined", [$socket]);
-                $clients = array_diff($clients, [$socket]);  // Usuwamy socket, klient łączy się od teraz z grą, nie z serwerem
-                break;
-                
-            case commandTypes[1]:  //Create
+        switch(strtolower($args[0])){  
+            case commandTypes[0]:  // Create
                 if($gamePort > 65535 && empty($freePorts)){
-                    send("Error 41 " . $e, [$socket]);
+                    send("Error 41 ", [$socket]);
                     break;
                 }
                 try{
-                    $prt = $gamePort;
-                    if(empty($freePorts)) $gamePort++;
-                    else $prt = array_shift($freePorts);
+                    $gamePort = $gamePort + 1;
+                    if(!empty($freePorts)) 
+                        $gamePort = array_shift($freePorts); 
+                    else
+                        while(isPortInUse($address, $gamePort) && $gamePort <= 65535){ $gamePort++;}
+                    if($gamePort > 65535){
+                        send("Error 42 ", [$socket]);
+                        return;
+                    }
 
-                    $games[$prt] = new Game($address, $prt, $socket, (int)$args[1], $args[2], (int)$args[3]);
-                    $gamesSockets[$prt] = $games[$prt]->getSocket();
+                    $cmd = "php " . escapeshellarg(__DIR__ . DIRECTORY_SEPARATOR . "createGame.php") . " $port " . " $gamePort " . 
+                           escapeshellarg($args[1]) .  " " . escapeshellarg($args[2]) . " " . escapeshellarg($args[3]);
+
+                    if (PHP_OS_FAMILY === 'Windows') $cmd = "start /B " . $cmd;
+                    else $cmd .= " > /dev/null 2>&1 &";
+                    exec($cmd);
                 }
                 catch(Exception $e){
                     send("Error 40 " . $e, [$socket]);
                     break;
                 }
 
-                send("Port " . (string)$prt, [$socket]);
-                $clients = array_diff($clients, [$socket]);  // Usuwamy socket, klient łączy się od teraz z grą, nie z serwerem
+                // Zwracamy port nowej gry i zamykamy połączenie
+                send("Port " . (string)$gamePort, [$socket]);
+                unsetSocket($socket, $clients, $server);  // Usuwamy socket, klient łączy się od teraz z grą, nie z serwerem
                 break;
 
-            case commandTypes[2]:
+            case commandTypes[1]:  // Ping
                 send("Reping", [$socket]);
                 break;
 
-            case commandTypes[3]:
+            case commandTypes[2]:  // Reping
                 break;
 
             default:
@@ -136,5 +106,21 @@ while (true) {
                 break;
         }
     }
+}
+
+function closeServer(&$clients, &$server){
+    foreach($games as $game) { $game->__destruct(); }
+    foreach($clients as $client) unsetSocket($client, $clients, $server);
+    socket_close($server);
+    die(date("Y-m-d H:i:s",time()) . " Zamknięto server.");
+}
+
+function isPortInUse($host, $port) {
+    $connection = @fsockopen($host, $port, $errno, $errstr, 0.5); 
+    if ($connection) {
+        fclose($connection);  
+        return true; 
+    }
+    return false;  
 }
 ?>
