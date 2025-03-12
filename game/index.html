@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="description" content="Kółko i krzyżyk 2">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Access-Control-Allow-Origin" content="modalLocal.html">
+
+    </meat>
+    <link rel="icon" type="image/x-icon" href="../resources/icon.ico">
+    <title>Kółko i krzyżyk 2</title>
+    <link rel="stylesheet" href="style.css">
+
+    <script>
+        function changeFillColor(){
+            const preview = document.getElementById("previewFill");
+            preview.style.backgroundColor = document.getElementById("fillColor").value;
+            preview.style.opacity = (document.getElementById("fillAlpha").value/100);
+        }
+        function changeLineColor(){
+            const preview = document.getElementById("previewLine");
+            preview.style.backgroundColor = document.getElementById("lineColor").value;
+            preview.style.opacity = (document.getElementById("lineAlpha").value/100);
+        }
+
+        window.onload = function() {
+            changeFillColor();
+            changeLineColor();
+        }
+    </script>
+</head>
+<body>
+    <header>
+        <img src="../resources/ikona2.png" alt="Nie udało się załadować ikony">
+        <h1>Kółko i krzyżyk 2</h1>
+        <nav>
+            <button>Jak grać</button> 
+            <div class="line"></div>
+            <button>Sterowanie</button> 
+            <div class="line"></div>
+            <button>Button3</button> 
+        </nav>
+    </header>
+    <main>
+        <aside>
+            <div class="styleContainer">
+                <label for="fillColor">Kolor wypełnienia: </label>
+                <input type="color" name="fillColor" id="fillColor" value="#00005A" onchange="changeFillColor()"><br>
+                <div class="colorPreview" id="previewFill"></div>
+                <input type="range" name="fillAlpha" id="fillAlpha" min="0" max="100" onchange="changeFillColor()">
+            </div>
+            <div class="styleContainer">
+                <label for="lineColor">Kolor linii: </label>
+                <input type="color" name="lineColor" id="lineColor" value="#000064" onchange="changeLineColor()"><br>
+                <div class="colorPreview" id="previewLine"></div>
+                <input type="range" name="lineAlpha" id="lineAlpha" min="0" max="100" onchange="changeLineColor()">
+            </div>
+            <div class="styleContainer">
+                <label for="lineWidth">Grubość linii: </label>
+                <input type="number" name="lineWidth" id="lineWidth" value="1" min="0" max="10"><br>
+            </div>
+            <div class="styleContainer">
+                <label for="precision">Precyzja: </label>
+                <input type="range" name="precision" id="precision" min="4" max="30"><br>
+            </div>
+            <button id="apply">Zastosuj</button>
+        </aside>
+        <canvas id="canvas"></canvas>
+    </main>
+    <footer>
+        Adam Stachowicz 2024
+    </footer>
+   
+</body>
+</html>
+
+<script type="module">
+    import Board from "../engine/Board.js";
+    import { rgbToColor } from "../engine/Objects/Color.js";
+
+    let address = "ws://localhost";
+    let port = "3310";
+    const canvas = document.getElementById("canvas");
+    const board = new Board(canvas, canvas.offsetWidth, canvas.offsetHeight, 4, 4, 4, 70, 14, 3);
+
+    let formData = JSON.parse(sessionStorage.getItem("hostData"));
+    if(formData === null) formData = JSON.parse(sessionStorage.getItem("joinData"));
+    if(formData === null) formData = JSON.parse(sessionStorage.getItem("localData"));
+    console.log(formData);
+
+    window.addEventListener("resize", () => board.resize());
+    document.getElementById("apply").onclick = function(){
+        board.setFieldsStyle(
+            rgbToColor(document.getElementById("fillColor").value),
+            rgbToColor(document.getElementById("lineColor").value),
+            document.getElementById("lineWidth").value
+        );
+    }
+    document.getElementById("canvas").addEventListener("dblclick", () =>{ console.log(board.chosenField); });
+
+    let socket = new WebSocket(address + ":" + port);
+    console.log("stan: ", socket.readyState);
+    socket.onopen = function() { 
+        console.log('Połączono'); 
+        socket.send("Create 2 4,4,4 3"); 
+    };
+    socket.onmessage = function(event) { 
+        console.log(`<p>Otrzymano: ${event.data}</p>`); 
+        if(!event.data) return;
+        const args = event.data.split(" ");
+
+        switch(args[0]){
+            case "Port":
+                if(!args[1]){
+                    console.log("Nie podano portu.");
+                    return;
+                }
+                port = args[1];
+                socket = new WebSocket(address + ":" + port);
+                break;
+        }
+    };
+    socket.onclose = function() { console.log('Rozłączono'); };
+    function sendMessage(msg) { socket.send(msg);}
+
+</script>

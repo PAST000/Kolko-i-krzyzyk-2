@@ -35,15 +35,10 @@ main{
     flex-grow: 1;
     text-align: center;
     background-color: deepskyblue;
-}
-
-article{
-    box-sizing: border-box;
-    width: 100%;
-    height: 90%;
     display: flex;
-    justify-content: center; 
-    align-items: center; 
+    flex-direction: row-reverse;
+    align-items: stretch;
+    overflow: hidden;
 }
 
 footer{
@@ -99,64 +94,35 @@ nav > button:hover{
     display: inline-block;
 }
 
-.buttonsContainer{
-    width: 470px;
-    text-align: center;
-}
-
-.buttonWrapper{
-    display: inline-block;
-    margin-top: 10px;
-}
-
-.buttonWrapper:hover{
-    background-color: rgba(210, 210, 210, 0.6);
-}
-
-#localButton, #joinButton, #computerButton, #hostButton{
+aside{
+    width: 20vw;
+    height: 100%;
+    background-color: royalblue;
     color: white;
-    background-color: transparent;
-    border: none;
-    font-size: 30px;
-    margin: 5px;
+    padding: 15px;
+    box-sizing: border-box;
 }
 
-#computerButton{
-    color: gray;
-}
-
-#localButton::before{
-    content: url(resources/local.svg);
-    margin-right: 8px;
-}
-
-#joinButton::before{
-    content: url(resources/multi.svg);
-    margin-right: 8px;
-}
-
-#hostButton::before{
-    content: url(resources/gear.svg);
-    margin-right: 8px;
-}
-
-#computerButton::before{
-    content: url(resources/computer.svg);
-    margin-right: 8px;
-}
-
-#localWrapper, #joinWrapper, #hostWrapper, #computerWrapper{
-    background-color: rgba(0,0,0,0.4); 
-    width: 100%;
+canvas {
+    width: 80vw;
     height: 100%;
-    position: fixed;
-    z-index: 1;
-    left: 0;
-    top: 0;
-    display: none;
 }
 
-iframe{
-    width: 100%;
-    height: 100%;
+.styleContainer{
+    margin-top: 7px;
+    margin-bottom: 10px;
+}
+
+input [type="range"]{
+    background-color: #afafaf;
+    color: aquamarine;
+}
+
+.colorPreview{
+    width: 24px;
+    height: 24px;
+    background-color: white;
+    border: solid 2px black;
+    border-radius: 4px;
+    display: inline-block;
 }

@@ -1,8 +1,6 @@
 <?php
 const delimeter = " ";  // Separator do explode() i implode()
-const commandTypes = [
-    "join", "create", "ping", "reping"
-];
+const commandTypes = [ "create", "ping", "reping" ];
 
 function readMessage($socket){
     try{ 
@@ -57,22 +55,47 @@ function encodeMessage($message) {
     else return chr(129) . chr(127) . pack('J', $length) . $message;
 }
 
-function handshake($newClient){
-    $request = socket_read($newClient, 5000);
-    preg_match('#Sec-WebSocket-Key: (.*)\r\n#', $request, $matches);
-    $key = base64_encode(pack('H*', sha1($matches[1] . '258EAFA5-E914-47DA-95CA-C5AB0DC85B11')));
-    $headers = "HTTP/1.1 101 Switching Protocols\r\n";
-    $headers .= "Upgrade: websocket\r\n";
-    $headers .= "Connection: Upgrade\r\n";
-    $headers .= "Sec-WebSocket-Version: 13\r\n";
-    $headers .= "Sec-WebSocket-Accept: $key\r\n\r\n";
-    socket_write($newClient, $headers, strlen($headers));
-}
-
 function send($txt, $sockets, $skip = []){ 
     $message = encodeMessage($txt);
     foreach($sockets as $socket) 
         if(!in_array($socket, $skip)) 
             socket_write($socket, $message);
+}
+
+function handshake(&$server, &$clients){
+    $newClient = socket_accept($server);
+    if(!$newClient) return;
+    socket_set_nonblock($newClient); 
+    $clients[] = $newClient;
+
+    $request = socket_read($newClient, 5000);
+    preg_match('#Sec-WebSocket-Key: (.*)\r\n#', $request, $matches);
+
+    if(!isset($matches[1]) || empty($matches[1])){
+        file_put_contents("error.txt", "mathces Error", FILE_APPEND);
+        unsetSocket($newClient, $clients, $server);
+        return;
+    }
+    $matches[1]= rtrim($matches[1], "\r\n");
+
+    $key = base64_encode(pack('H*', sha1($matches[1] . '258EAFA5-E914-47DA-95CA-C5AB0DC85B11')));
+    $headers = "HTTP/1.1 101 Switching Protocols\r\n" .
+                "Upgrade: websocket\r\n" .
+                "Connection: Upgrade\r\n" .
+                "Sec-WebSocket-Version: 13\r\n" .
+                "Sec-WebSocket-Accept: $key\r\n\r\n";
+    socket_write($newClient, $headers, strlen($headers));
+}
+
+function unsetSocket(&$socket, &$clients, &$server){
+    send("Closed", [$socket], [$server]);
+    if($socket !== $server){
+        socket_shutdown($socket);
+        socket_close($socket);
+        $clients = array_filter($clients, function ($client) use ($socket) {
+            return $client !== $socket;
+        });
+        $clients = array_values($clients); 
+    }
 }
 ?>
