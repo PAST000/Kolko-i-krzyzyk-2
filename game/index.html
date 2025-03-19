@@ -64,8 +64,11 @@
                 <input type="range" name="precision" id="precision" min="4" max="30"><br>
             </div>
             <button id="apply">Zastosuj</button>
+            <button id="ping">Ping</button>
         </aside>
-        <canvas id="canvas"></canvas>
+        <canvas id="canvas">
+        </canvas>
+        <section></section>
     </main>
     <footer>
         Adam Stachowicz 2024
@@ -80,6 +83,7 @@
 
     let address = "ws://localhost";
     let port = "3310";
+    let connectAgain = false;  // Flaga dla eventu onclose
     const canvas = document.getElementById("canvas");
     const board = new Board(canvas, canvas.offsetWidth, canvas.offsetHeight, 4, 4, 4, 70, 14, 3);
 
@@ -97,6 +101,9 @@
         );
     }
     document.getElementById("canvas").addEventListener("dblclick", () =>{ console.log(board.chosenField); });
+    document.getElementById("ping").onclick = function(){
+        sendMessage("Ping");
+    }
 
     let socket = new WebSocket(address + ":" + port);
     console.log("stan: ", socket.readyState);
@@ -116,11 +123,18 @@
                     return;
                 }
                 port = args[1];
-                socket = new WebSocket(address + ":" + port);
+                connectAgain = true;
+                socket.close();
                 break;
         }
     };
-    socket.onclose = function() { console.log('Rozłączono'); };
-    function sendMessage(msg) { socket.send(msg);}
+    socket.onclose = function() { 
+        console.log("stan: ", socket.readyState);
+        console.log('Rozłączono'); 
+        if(connectAgain)
+            socket = new WebSocket(address + ":" + port);
+        console.log("stan: ", socket.readyState);
+    };
+    function sendMessage(msg) { socket.send(msg); console.log("stan: ", socket.readyState);}
 
 </script>

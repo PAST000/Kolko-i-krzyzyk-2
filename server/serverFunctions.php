@@ -1,6 +1,6 @@
 <?php
 const delimeter = " ";  // Separator do explode() i implode()
-const commandTypes = [ "create", "ping", "reping" ];
+const commandTypes = [ "create", "ping", "reping", "new" ];
 
 function readMessage($socket){
     try{ 
@@ -57,9 +57,12 @@ function encodeMessage($message) {
 
 function send($txt, $sockets, $skip = []){ 
     $message = encodeMessage($txt);
+    file_put_contents("logsKiK2/send.txt", $txt, FILE_APPEND);     // FILE LOG
     foreach($sockets as $socket) 
-        if(!in_array($socket, $skip)) 
+        if(!in_array($socket, $skip) && $socket) {
+            file_put_contents("logsKiK2/actuallySend.txt", $txt, FILE_APPEND);     // FILE LOG
             socket_write($socket, $message);
+        }
 }
 
 function handshake(&$server, &$clients){
@@ -70,9 +73,10 @@ function handshake(&$server, &$clients){
 
     $request = socket_read($newClient, 5000);
     preg_match('#Sec-WebSocket-Key: (.*)\r\n#', $request, $matches);
+    file_put_contents("logsKiK2/serverHandshakes.txt", $request, FILE_APPEND);             // FILE LOG
 
     if(!isset($matches[1]) || empty($matches[1])){
-        file_put_contents("error.txt", "mathces Error", FILE_APPEND);
+        file_put_contents("error.txt", "mathces Error(server)", FILE_APPEND);
         unsetSocket($newClient, $clients, $server);
         return;
     }
@@ -88,14 +92,26 @@ function handshake(&$server, &$clients){
 }
 
 function unsetSocket(&$socket, &$clients, &$server){
-    send("Closed", [$socket], [$server]);
-    if($socket !== $server){
-        socket_shutdown($socket);
-        socket_close($socket);
-        $clients = array_filter($clients, function ($client) use ($socket) {
-            return $client !== $socket;
-        });
-        $clients = array_values($clients); 
+    try{
+        send("Closed", [$socket], [$server]);
+        if($socket !== $server){
+            socket_shutdown($socket);
+            socket_close($socket);
+            $clients = array_filter($clients, function ($client) use ($socket) {
+                return $client !== $socket;
+            });
+            $clients = array_values($clients); 
+        }
     }
+    catch(Exception $e) {}
+}
+
+function isPortInUse($host, $port) {
+    $connection = @fsockopen($host, $port, $errno, $errstr, 0.5); 
+    if ($connection) {
+        fclose($connection);  
+        return true; 
+    }
+    return false;  
 }
 ?>

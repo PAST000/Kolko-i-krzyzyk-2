@@ -17,9 +17,9 @@
         <img src="resources/ikona2.png" alt="Nie udało się załadować ikony">
         <h1>Kółko i krzyżyk 2</h1>
         <nav>
-            <button>Jak grać</button> 
+            <button id="howToButton">Jak grać</button> 
             <div class="line"></div>
-            <button>Sterowanie</button> 
+            <button id="controlButton">Sterowanie</button> 
             <div class="line"></div>
             <button>Button3</button> 
         </nav>
@@ -45,22 +45,21 @@
     <footer>
         Adam Stachowicz 2024
     </footer>
-    <div id="localWrapper">
-        <iframe src="modalLocal.html" title="local"></iframe>
-    </div>
-    <div id="joinWrapper">
-        <iframe src="modalJoin.html" title="join"></iframe>
-    </div>
-    <div id="hostWrapper">
-        <iframe src="modalHost.html" title="local"></iframe>
-    </div>
-    <div id="computerWrapper">
-        <iframe src="modalComputer.html" title="computer"></iframe>
-    </div>
+
+    <div id="howToWrapper" class="modalWrapper"> <iframe src="modals/modalHowTo.html" title="howToPlay"></iframe> </div>
+    <div id="controlWrapper" class="modalWrapper"> <iframe src="modals/modalControl.html" title="control"></iframe> </div>
+
+    <div id="localWrapper" class="modalWrapper"> <iframe src="modals/modalLocal.html" title="local"></iframe> </div>
+    <div id="joinWrapper" class="modalWrapper"> <iframe src="modals/modalJoin.html" title="join"></iframe> </div>
+    <div id="hostWrapper" class="modalWrapper"> <iframe src="modals/modalHost.html" title="local"></iframe> </div>
+    <div id="computerWrapper" class="modalWrapper"> <iframe src="modals/modalComputer.html" title="computer"></iframe> </div>
 </body>
 </html>
 
 <script>
+    document.getElementById("howToButton").onclick = function(){ document.getElementById("howToWrapper").style.display = "block"; };
+    document.getElementById("controlButton").onclick = function(){ document.getElementById("controlWrapper").style.display = "block"; };
+
     document.getElementById("localButton").onclick = function(){ document.getElementById("localWrapper").style.display = "block"; };
     document.getElementById("joinButton").onclick = function(){ document.getElementById("joinWrapper").style.display = "block"; };
     document.getElementById("hostButton").onclick = function(){ document.getElementById("hostWrapper").style.display = "block"; };
@@ -68,6 +67,8 @@
 
     window.addEventListener("message", function(event) {
         if(event.data === "closeModal"){
+            document.getElementById("howToWrapper").style.display = "none"; 
+            document.getElementById("controlWrapper").style.display = "none"; 
             document.getElementById("localWrapper").style.display = "none"; 
             document.getElementById("joinWrapper").style.display = "none"; 
             document.getElementById("hostWrapper").style.display = "none"; 

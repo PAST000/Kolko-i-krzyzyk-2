@@ -13,7 +13,8 @@ class Game{
     private $turn = 0;          // Tura
     private $paused = false;
 
-    private $clients;       // Tablica przechowująca wszystkie gniazda (serwer + klienci), klucz -> socket, wartość -> [id gracza, nick]
+    private $clients;       // socket => [id gracza, nick]
+    private $nicks = [];    // id => nick
     private $players = [];  // Dla czytelności 
     private $server;
     private $mainServer;
@@ -27,10 +28,11 @@ class Game{
     private const commandTypes = [ "put", "leave", "ping", "reping" ];
     private const adminCommands = ["create", "drop", "kick", "pause", "unpause", "ping", "reping" ];
 
-    function __construct($mainPort, $addr, $prt, $nOfPlayers, $sizes = "4,4,4", $trg = 3){
+    function __construct($addr, $mainPort, $prt, $nOfPlayers, $sizes = "4,4,4", $trg = 3){
         if(!filter_var($addr, FILTER_VALIDATE_IP)) throw new Exception("Nie poprawny adres");
         if(empty($prt) || $prt < 0 || $prt > 65535) throw new Exception("Nie poprawny port");
-        if(empty($nOfPlayers) || $nOfPlayers < 0 || $nOfPlayers > Game::maxPlayers) throw new Exception("Nie poprawna ilość graczy, maksymalna to: " . (string)Game::maxPlayers);
+        if(empty($mainPort) || $mainPort < 0 || $mainPort > 65535) throw new Exception("Niepoprawny port głównego serwera");
+        if(empty($nOfPlayers) || $nOfPlayers <= 1 || $nOfPlayers > Game::maxPlayers) throw new Exception("Nie poprawna ilość graczy, maksymalna to: " . (string)Game::maxPlayers);
 
         $this->address = $addr;           
         $this->port = $prt;   
@@ -46,83 +48,98 @@ class Game{
         socket_listen($this->server); 
         socket_set_nonblock($this->server);
 
-        // Łączenie z głównym serwerem, w celu późniejszego zawiadomienia o końcu gry
-        $this->serverHandshake();
-        send("New " . $this->port, [$this->mainServer]);
-
         $this->clients = new ObjectsArr();
         $this->clients->add($this->server, [-1, ""]);
         $this->read = $this->clients;
+        file_put_contents("logsKiK2/gameDestruct.txt", "2", FILE_APPEND);     // FILE LOG
     }
        
     function __destruct(){
         $this->board->__destruct();
         $sockets = $this->clients->getFirstArr();
-        foreach($sockets as $socket){ 
-            //send("Closed", [$client], [$this->server]);
-            //if($client !== $this->server) socket_close($client);
-            unsetSocket($socket, $sockets, $server);
-        }
-        unsetSocket($this->mainServer, $sockets, $server);
+        file_put_contents("logsKiK2/gameDestruct.txt", "a", FILE_APPEND);     // FILE LOG
+        foreach($sockets as $socket)
+            unsetSocket($socket, $sockets, $this->server);
+        unsetSocket($this->mainServer, $sockets, $this->server);
         socket_close($this->server);
-        die();
     }
 
     function monitor(){
+        // Łączenie z głównym serwerem, w celu późniejszego zawiadomienia o końcu gry
+        $this->serverHandshake();
+        send("New " . $this->port, [$this->mainServer]);
+
         while (true) {
             $this->read = $this->clients;
             $readArr = $this->read->getFirstArr();
 
             socket_select($readArr, $this->write, $this->except, 0);
-            file_put_contents("game.txt", "GAME". $this->port, FILE_APPEND);
-            usleep(10000);  // 10ms
 
             for ($i = 0; $i < $this->read->count(); $i++) {
                 $socket = $this->read->firstByID($i);
                 $idNick = $this->read->secondByID($i);
 
+                $errorCode = $socket ? socket_last_error($socket) : socket_last_error();
+                socket_clear_error($socket);
+                $errorMsg = socket_strerror($errorCode);
+                file_put_contents("logsKiK2/socketStates.log", date("Y-m-d H:i:s",time()) . " - [$errorCode] $errorMsg\n", FILE_APPEND); 
+                send("Ping", [$socket]);
+                socket_write("Ping", $socket, 4);
+
                 if ($socket === $this->server){  // Nowe połączenie
                     $newClient = socket_accept($this->server);
                     if(!$newClient) continue;
-                    socket_set_nonblock($newClient);
-                    $this->clients->add($newClient, [-1, ""]);
+                    //socket_set_nonblock($newClient); 
+                    file_put_contents("logsKiK2/gameMonitor.txt", "n0.2gga", FILE_APPEND);     // FILE LOG 
 
                     $request = socket_read($newClient, 5000);
                     preg_match('#Sec-WebSocket-Key: (.*)\r\n#', $request, $matches);
+                    file_put_contents("logsKiK2/gameHandshake.txt", "LOG\n" . $request, FILE_APPEND);     // FILE LOG
+                    file_put_contents("logsKiK2/gameMatches.txt", "LOG\n" . $matches[1] . !isset($matches[1]) . empty($matches[1]), FILE_APPEND);     // FILE LOG
 
+                    file_put_contents("logsKiK2/gameMonitor.txt", "n0.3gga", FILE_APPEND);     // FILE LOG 
                     if(!isset($matches[1]) || empty($matches[1])){
-                        file_put_contents("error.txt", "mathces Error", FILE_APPEND);
-                        $this->clients->pop();
+                        file_put_contents("logsKiK2/gameError.txt", "mathces Error(game)", FILE_APPEND);     // FILE LOG
+                        send("Closed", [$newClient], [$this->server]);
+                        socket_shutdown($newClient);
+                        socket_close($newClient);
                         continue;
                     }
                     $matches[1]= rtrim($matches[1], "\r\n");
 
                     $key = base64_encode(pack('H*', sha1($matches[1] . '258EAFA5-E914-47DA-95CA-C5AB0DC85B11')));
-                    $headers = "HTTP/1.1 101 Switching Protocols\r\n";
-                    $headers .= "Upgrade: websocket\r\n";
-                    $headers .= "Connection: Upgrade\r\n";
-                    $headers .= "Sec-WebSocket-Version: 13\r\n";
-                    $headers .= "Sec-WebSocket-Accept: $key\r\n\r\n";
+                    $headers = "HTTP/1.1 101 Switching Protocols\r\n" .
+                                "Upgrade: websocket\r\n" .
+                                "Connection: Upgrade\r\n" .
+                                "Sec-WebSocket-Version: 13\r\n" .
+                                "Sec-WebSocket-Accept: $key\r\n\r\n";
                     socket_write($newClient, $headers, strlen($headers));
+                    file_put_contents("logsKiK2/gameMonitor.txt", "n0.4gga", FILE_APPEND);     // FILE LOG 
 
+                    $this->clients->add($newClient, [-1, ""]);
                     if($this->admin === null) $this->admin = $newClient;  // Pierwszy klient to admin
                     continue;
                 }
-
+               // file_put_contents("logsKiK2/gameMonitor.txt", "n1gga", FILE_APPEND);     // FILE LOG 
                 $args = readMessage($socket);
-                if($args === false || empty($args) || $args === "") continue;
-                    
+                if(empty($args) || $args === "" || empty($args[0]) || $args[0] === "") continue;
+                file_put_contents("logsKiK2/gameMessages.txt", implode(" ", $args), FILE_APPEND);     // FILE LOG
+                file_put_contents("logsKiK2/gameMonitor.txt", "n2gga", FILE_APPEND);     // FILE LOG
+
                 if($socket === $this->admin){  //Admin
+                    file_put_contents("logsKiK2/gameMonitor.txt", "n3gga", FILE_APPEND);     // FILE LOG
                     if(!$this->admin($args, $socket)) continue;
                 }
                 else{
+                    file_put_contents("logsKiK2/gameMonitor.txt", "n4gga", FILE_APPEND);     // FILE LOG
                     if($this->paused && $args[0] != $commandTypes[2]) continue; //Wyjątek - opuszczenie gry
+                    file_put_contents("logsKiK2/gameMonitor.txt", "n4.5gga", FILE_APPEND);     // FILE LOG
                     if(strtolower($args[0]) === "join"){
                         if($this->getCurrentNumOfPlayers() >= $this->numOfPlayers){  // Gra pełna
                             send("Error 30", [$socket]);
                             continue;
                         }
-                        if(empty($args[1]) || $args[1] === false){
+                        if(empty($args[1])){
                             send("Error 31", [$socket]);
                             continue;
                         }
@@ -138,30 +155,35 @@ class Game{
                         if(!$this->player($args, $idNick[0], $socket)) continue;
                     }
                 }
-        
-                $players = array_filter($this->clients->getFirstArr(), function($idN){   
-                    return isset($idN[0]) && $idN[0] >=0 && $idN[0] <= maxPlayers - 1;
-                });
-        
+                file_put_contents("logsKiK2/gameMonitor.txt", "n5gga", FILE_APPEND);     // FILE LOG 
+                $players = array_filter($this->clients->getSecondArr(), 
+                                        function($idN){   
+                                            return isset($idN[0]) && $idN[0] >=0 && $idN[0] < Game::maxPlayers;
+                                        }  
+                );
+                file_put_contents("logsKiK2/gameMonitor.txt", "n6gga", FILE_APPEND);     // FILE LOG 
                 // Refresh
+                $implodedBoard = $this->board->implode();
                 for($i = 0; $i < $this->read->count(); $i++){
                     $sckt = $this->read->firstByID($i);
                     $idN = $this->read->secondByID($i);
-                    send("Refresh" . implode(',', $this->players) . $this->board->implode() . (string)$this->target . (string)$this->turn . (string)$idN[0], 
-                                             [$sckt], [$this->server]); 
-                }   
+                    send("Refresh" . implode(',', $this->players) . $implodedBoard . (string)$this->target . (string)$this->turn . (string)$idN[0], 
+                         [$sckt], [$this->server]); 
+                }  
+                file_put_contents("logsKiK2/gameMonitor.txt", "n7gga", FILE_APPEND);     // FILE LOG 
             }
         }
     }
 
     private function admin($args, $socket){
+        file_put_contents("logsKiK2/admin.txt", implode(" ", $args), FILE_APPEND);     // FILE LOG
         switch(strtolower($args[0])){
-            case $adminCommands[0]:    //Create
+            case self::adminCommands[0]:    //Create
                 if(count($args) < 4){
                     send("Error 11", [$socket]);
                     return false;
                 }
-                if($args[1] < 2 || $args[2] > maxPlayers){
+                if($args[1] < 2 || $args[2] > Game::maxPlayers){
                     send("Error 21", [$socket]);
                     return false;
                 }
@@ -173,12 +195,13 @@ class Game{
                 }
                 break;
 
-            case $adminCommands[1]:  //Drop
+            case self::adminCommands[1]:  //Drop
                 send("Drop", $this->mainServer);
                 $this->__destruct();
+                die();
                 break;
 
-            case $adminCommands[2]:  //Kick
+            case self::adminCommands[2]:  //Kick
                 if(count($args) < 2){
                     send("Error 11", [$socket]);
                     return false;
@@ -206,20 +229,37 @@ class Game{
                 sort($this->availableIDs);
                 break;
 
-            case $adminCommands[3]:  //Pause
+            case self::adminCommands[3]:  //Pause
                 $this->paused = true;
                 foreach($this->read->getFirstArr() as $client) send("Paused", [$client], [$socket]);
                 break;
 
-            case $adminCommands[4]:  //Unpause
+            case self::adminCommands[4]:  //Unpause
                 $this->paused = false;
                 foreach($this->read->getFirstArr() as $client) send("Unpaused", [$client], [$socket]);
                 break;
 
-            case $adminCommands[5]:  //Ping
+            case self::adminCommands[5]:  //Ping
                 send("Reping", [$socket]);
                 break;
             break;
+
+            case "put":
+                if(count($args) < 4){
+                    send("Error 11", [$socket]);
+                    return false;
+                }
+                if($id !== $this->turn){
+                    send("Error 23", [$socket]);
+                    return false;
+                }
+
+                if(!$this->board->put($args[1], $id)){
+                    send("Error 22", [$socket]);
+                    return false;
+                }
+                $this->incrementTurn();
+                break;
 
             default:
                 send("Error 10", [$socket]);
@@ -230,8 +270,9 @@ class Game{
     }
 
     private function player($args, $id, $socket){
+        file_put_contents("logsKiK2/player.txt", implode(" ", $args), FILE_APPEND);     // FILE LOG
         switch(strtolower($args[0])){
-            case $commandTypes[0]:  //Put
+            case self::commandTypes[0]:  //Put
                     if(count($args) < 4){
                         send("Error 11", [$socket]);
                         return false;
@@ -248,16 +289,16 @@ class Game{
                     $this->incrementTurn();
                 break;
 
-            case $commandTypes[1]:  //Leave
+            case self::commandTypes[1]:  //Leave
                 $this->clients->delByFirst($socket);
                 if($id >= 0) $this->availableIDs[] = $id;
                 break;
 
-            case $commandTypes[2]:  //Ping
+            case self::commandTypes[2]:  //Ping
                 send("Reping", [$socket]);
                 break;
 
-            case $commandTypes[3]:  //Reping
+            case self::commandTypes[3]:  //Reping
                 break;
 
             default:
@@ -271,12 +312,12 @@ class Game{
         $this->mainServer = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
         if (!$this->mainServer) throw new Exception("Nie udało się stworzyć gniazda dla serwera.");
 
-        if (!socket_connect($this->mainServer, $this->address, $this->mainServerPort)) 
+        if (!socket_connect($this->mainServer, "127.0.0.1", $this->mainServerPort)) 
             throw new Exception("Nie udało się połączyć z serwerem: " . socket_strerror(socket_last_error($this->mainServer)));
     
         $key = base64_encode(random_bytes(16));
         $headers = "GET / HTTP/1.1\r\n" .
-                   "Host: {$this->address}:{$this->mainServerPort}\r\n" .
+                   "Host: localhost:{$this->mainServerPort}\r\n" .
                    "Upgrade: websocket\r\n" .
                    "Connection: Upgrade\r\n" .
                    "Sec-WebSocket-Key: {$key}\r\n" .
@@ -286,16 +327,18 @@ class Game{
         // Oczekiwanie na odpowiedź serwera
         socket_set_option($this->mainServer, SOL_SOCKET, SO_RCVTIMEO, ["sec" => 10, "usec" => 0]);
         $response = socket_read($this->mainServer, 2048);
-        if ($response === false || strpos($response, "101 Switching Protocols") === false) 
+        if ($response === false || strpos($response, "101 Switching Protocols") === false || empty($response)){
+            file_put_contents("logsKiK2/gameServerHandshake.txt", "a", FILE_APPEND);     // FILE LOG
             die("Handshake nie powiódł się.");
+        }
     }
 
-    private function incrementTurn(){ $this->turn = (($this->turn >= $this->numOfPlayers - 1) ? 0 : $this->turn + 1); }
+    private function incrementTurn(){ $this->turn = ($this->turn + 1) % $this->numOfPlayers; }
 
     function getCurrentNumOfPlayers(){ 
         return count(array_filter($this->clients->getSecondArr(), 
                                   function($idN){ 
-                                      return isset($idN[0]) && $idN[0] >=0 && $idN[0] <= maxPlayers - 1; 
+                                      return isset($idN[0]) && $idN[0] >=0 && $idN[0] <= Game::maxPlayers - 1; 
                                   }
         ));
     }

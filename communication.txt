@@ -3,30 +3,26 @@ Do serwera:
     -Ping/Reping
 
 Z serwera:
-    -Port port  // "Zwrot" z Create
-    -Error type txt
+    -Error type  // opcjonalnie opis słowny
+    -Port port   // "Zwrot" z Create
     -Ping/Reping
 
-Do gry:
+Do gry (użytkownik):
     -Put cords[]
     -Join nick
     -Leave 
     -Ping/Reping
 
-Z gry do serwera:
-    -New port
-    -Drop     // Koniec gry
-
-Tylko admin:
+Do gry (admin):
     -Create numOfPlayers sizes[] target 
-    -Drop  //Koniec gry
+    -Drop    // Koniec gry
     -Clear position[]
     -ClearPlayer id
     -Kick id
     -Pause/Unpause 
     -Ping/Reping
  
-Z gry:
+Z gry do użytkownika:
     -Error   type txt
     -Refresh players[](id => nick) board target turn(id) yourID
     -Won     name id 
@@ -36,6 +32,13 @@ Z gry:
     -Kicked
     -Paused/Unpaused
     -Ping/Reping
+
+Z gry do serwera:
+    -New port
+    -Drop     // Koniec gry
+
+Z serwera do gry:
+    -Error
 
 ids = ['O', 'X', 'P']  // Kula, krzyżyk, piramida
 
@@ -63,6 +66,9 @@ Typy błędów:
 	40 Błąd zwrócony z gry (Opis błędu jest 2. argumentem)
 	41 Serwer pełny
 	42 Błąd przy przydzielaniu portu
+
+    5x Błąd w komunikacji serwer-gra
+	50 Nie poprawny port
 
     9x Błędy administratorskie
 	90 Nie istnieje taki gracz

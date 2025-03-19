@@ -11,7 +11,7 @@ $port = (int)$argv[2];
 $numOfPlayers = (int)$argv[3];
 $sizes = $argv[4];
 $target = (int) $argv[5];
-$game = new Game($mainPort, $address, $port, $numOfPlayers, $sizes, $target);
+$game = new Game($address, $mainPort, $port, $numOfPlayers, $sizes, $target);
 
 register_shutdown_function(function() use (&$game) {
     if (isset($game)) {
@@ -19,10 +19,7 @@ register_shutdown_function(function() use (&$game) {
     }
 });
 
-register_shutdown_function('close');
-file_put_contents("create3.txt", "test");
-
 try { $game->monitor(); } 
 catch (Exception $e) { file_put_contents("create_error.txt", "Błąd gry: " . $e->getMessage(), FILE_APPEND); }
-
+file_put_contents("logsKiK2/createGame.txt", "b", FILE_APPEND);     // FILE LOG
 ?>

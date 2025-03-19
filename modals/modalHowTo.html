@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<style>
+    #modalWrapper{
+        border: 5px solid black;
+        border-radius: 10px;
+        padding: 20px;
+        padding-top: 10px;
+        width: 25%;
+        background-color: rgb(101, 208, 250);
+        margin: auto;
+        margin-top: 30vh;
+    }
+
+    #close{
+        float: right;
+        background-color: transparent;
+        font-weight: bold;
+        font-size: 22px;
+        border: 0;
+    }
+</style>
+
+<html lang="pl">
+<head>
+    <meta charset="utf-8">
+</head>
+
+<section id="modalWrapper">
+    <button id="close">&times</button><br>
+    <p>Bla bla literki</p>
+</section>
+</html>
+
+<script>
+    document.getElementById("close").onclick = function() { 
+        window.parent.postMessage("closeModal", "*"); 
+    };
+</script>

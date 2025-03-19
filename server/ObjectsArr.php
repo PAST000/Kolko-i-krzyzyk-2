@@ -40,8 +40,8 @@ class ObjectsArr{
     }
 
     function pop(){
-        $this->first->pop();
-        $this->second->pop();
+        array_pop($this->first);
+        array_pop($this->second);
     }
 
     function setFirst($sec, $new){ $first[$this->idBySecond($sec)] = $new; }

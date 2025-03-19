@@ -1,5 +1,8 @@
 <?php
 require "game.php";
+use parallel\Runtime;
+use parallel\Channel;
+
 register_shutdown_function('closeServer');
 
 $address = '0.0.0.0';
@@ -16,8 +19,9 @@ socket_listen($server);
 
 $clients = [$server];
 $read = [];
-$games = [];         // Port => Socket
-$gamesSockets = [];  // Port => Socket, nie łączymy z tablicą powyżej w celu przeszukiwania
+$games = [];         // Port => wątek
+$gamesSockets = [];  // Port => socket
+$channel = Channel::make("gamesChannel", Channel::Infinite);
 
 while (true) {
     $read = $clients;
@@ -31,9 +35,11 @@ while (true) {
     foreach ($read as $socket) {
         $errorCode = $socket ? socket_last_error($socket) : socket_last_error();
         socket_clear_error($socket);
-        $errorMsg = socket_strerror($errorCode);
-        $logMessage = date("Y-m-d H:i:s",time()) . " - [$errorCode] $errorMsg\n";
-        file_put_contents("socket_errors.log", $logMessage, FILE_APPEND);                 // FILE LOG
+        if($errorCode !== 0){
+            $errorMsg = socket_strerror($errorCode);
+            $logMessage = date("Y-m-d H:i:s",time()) . " - [$errorCode] $errorMsg\n";
+            file_put_contents("logsKiK2/socket_errors.log", $errorCode . " " . $logMessage, FILE_APPEND); 
+        }
  
         if(!$socket && ($socket !== $server)){
             unsetSocket($socket, $clients, $server);
@@ -47,14 +53,17 @@ while (true) {
         $args = readMessage($socket);
         if($args === false || empty($args) || $args === "" || !isset($args[0])) continue;
         
-        file_put_contents("messages.txt", implode(" ", $args), FILE_APPEND);               // FILE LOG
+        file_put_contents("logsKiK2/serverMessages.txt", implode(" ", $args), FILE_APPEND);               // FILE LOG
 
-        if(in_array($socket, $games)){  // Wiadomość od gry
+        if(in_array($socket, $gamesSockets)){  // Wiadomość od gry
             switch(strtolower($args[0])){
                 case "drop":
-                    $gamePort = array_search($socket, $games);
-                    unset($games[$gamePort]);
+                    $gamePort = array_search($socket, $gamesSockets);
                     $freePorts[] = $gamePort;
+                    $games[$gamePort]->cancel();
+                    unsetSocket($socket);
+                    unset($games[$gamePort]);
+                    unset($gamesSockets[$gamePort]);
                     break;
             }
             continue;
@@ -71,18 +80,22 @@ while (true) {
                     if(!empty($freePorts)) 
                         $gamePort = array_shift($freePorts); 
                     else
-                        while(isPortInUse($address, $gamePort) && $gamePort <= 65535){ $gamePort++;}
+                        while(isPortInUse($address, $gamePort) && $gamePort <= 65535) 
+                            $gamePort++;
+
                     if($gamePort > 65535){
                         send("Error 42 ", [$socket]);
                         return;
                     }
-
+                    
                     $cmd = "php " . escapeshellarg(__DIR__ . DIRECTORY_SEPARATOR . "createGame.php") . " $port " . " $gamePort " . 
                            escapeshellarg($args[1]) .  " " . escapeshellarg($args[2]) . " " . escapeshellarg($args[3]);
 
                     if (PHP_OS_FAMILY === 'Windows') $cmd = "start /B " . $cmd;
                     else $cmd .= " > /dev/null 2>&1 &";
-                    exec($cmd);
+
+                    $task = new Runtime();
+                    $games[$gamePort] = $task->run(function() use ($cmd) { exec($cmd);});
                 }
                 catch(Exception $e){
                     send("Error 40 " . $e, [$socket]);
@@ -100,7 +113,16 @@ while (true) {
 
             case commandTypes[2]:  // Reping
                 break;
-
+                
+            case commandTypes[3]:  // New
+                file_put_contents("logsKiK2/new.txt", "t1", FILE_APPEND);
+                if(empty($args[1]) || !isset($args[2])){
+                    send("Error 50", [$socket]);
+                    break;
+                }
+                file_put_contents("logsKiK2/new2.txt", "t2", FILE_APPEND);
+                $gamesSockets[$args[1]] = $socket;
+                break;
             default:
                 send("Error 10", [$socket]);
                 break;
@@ -108,19 +130,11 @@ while (true) {
     }
 }
 
-function closeServer(&$clients, &$server){
-    foreach($games as $game) { $game->__destruct(); }
+function closeServer(){
+    global $gamesSockets, $clients, $server;
+    foreach($gamesSockets as $socket) { unsetSocket($socket); }
     foreach($clients as $client) unsetSocket($client, $clients, $server);
     socket_close($server);
     die(date("Y-m-d H:i:s",time()) . " Zamknięto server.");
-}
-
-function isPortInUse($host, $port) {
-    $connection = @fsockopen($host, $port, $errno, $errstr, 0.5); 
-    if ($connection) {
-        fclose($connection);  
-        return true; 
-    }
-    return false;  
 }
 ?>
