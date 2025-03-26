@@ -190,7 +190,7 @@
 
     document.getElementById("start").onclick = function() {
         let dimsArr = [];
-        const target = document.getElementById("target").value;
+        const trgt = document.getElementById("target").value;
         
         for(let i = 1; i <= dims; i++){
             if(document.getElementById("dim" + i).value < 2){
@@ -205,7 +205,7 @@
             return;
         }
 
-        sessionStorage.setItem("hostData", JSON.stringify({ dimsArr, numOfPlayers, target }));
+        sessionStorage.setItem("hostData", JSON.stringify({ nOfPlayers : numOfPlayers, sizes : dimsArr, target : trgt }));
         window.parent.postMessage("closeModal", "*"); 
         window.parent.location.href = "../game";
     };

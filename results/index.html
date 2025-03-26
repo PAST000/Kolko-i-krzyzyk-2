@@ -21,26 +21,11 @@
             <div class="line"></div>
             <button id="controlButton">Sterowanie</button> 
             <div class="line"></div>
-            <button id="resultsButton">Wyniki</button> 
+            <button>Wyniki</button> 
         </nav>
     </header>
     <main>
-        <article>
-            <section class="buttonsContainer">
-                <div class="buttonWrapper">
-                    <button id="localButton">Gra na tym urządzeniu</button>
-                </div>
-                <div class="buttonWrapper">
-                    <button id="joinButton">Dołącz do gry wieloosobowej</button>
-                </div>
-                <div class="buttonWrapper">
-                    <button id="hostButton">Utwórz grę</button>
-                </div>
-                <div class="buttonWrapper">
-                    <button id="computerButton">Gra z komputerem</button>
-                </div>
-            </section> 
-        </article>
+        
     </main>
     <footer>
         Adam Stachowicz 2024
@@ -59,7 +44,6 @@
 <script>
     document.getElementById("howToButton").onclick = function(){ document.getElementById("howToWrapper").style.display = "block"; };
     document.getElementById("controlButton").onclick = function(){ document.getElementById("controlWrapper").style.display = "block"; };
-    document.getElementById("resultsButton").onclick = function(){ document.location.href = "results"; }
 
     document.getElementById("localButton").onclick = function(){ document.getElementById("localWrapper").style.display = "block"; };
     document.getElementById("joinButton").onclick = function(){ document.getElementById("joinWrapper").style.display = "block"; };

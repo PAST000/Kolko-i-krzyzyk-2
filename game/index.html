@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta http-equiv="Access-Control-Allow-Origin" content="modalLocal.html">
 
-    </meat>
     <link rel="icon" type="image/x-icon" href="../resources/icon.ico">
     <title>Kółko i krzyżyk 2</title>
     <link rel="stylesheet" href="style.css">
@@ -34,14 +33,16 @@
         <img src="../resources/ikona2.png" alt="Nie udało się załadować ikony">
         <h1>Kółko i krzyżyk 2</h1>
         <nav>
-            <button>Jak grać</button> 
+            <button id="howToButton">Jak grać</button> 
             <div class="line"></div>
-            <button>Sterowanie</button> 
+            <button id="controlButton">Sterowanie</button> 
             <div class="line"></div>
-            <button>Button3</button> 
+            <button id="resultsButton">Wyniki</button> 
         </nav>
     </header>
     <main>
+        <section></section>
+        <canvas id="canvas"></canvas>
         <aside>
             <div class="styleContainer">
                 <label for="fillColor">Kolor wypełnienia: </label>
@@ -65,15 +66,15 @@
             </div>
             <button id="apply">Zastosuj</button>
             <button id="ping">Ping</button>
+            <input type="text" id="cmd">
         </aside>
-        <canvas id="canvas">
-        </canvas>
-        <section></section>
     </main>
     <footer>
         Adam Stachowicz 2024
     </footer>
    
+    <div id="howToWrapper" class="modalWrapper"> <iframe src="../modals/modalHowTo.html" title="howToPlay"></iframe> </div>
+    <div id="controlWrapper" class="modalWrapper"> <iframe src="../modals/modalControl.html" title="control"></iframe> </div>
 </body>
 </html>
 
@@ -81,18 +82,29 @@
     import Board from "../engine/Board.js";
     import { rgbToColor } from "../engine/Objects/Color.js";
 
-    let address = "ws://localhost";
+    let address = "localhost";
     let port = "3310";
     let connectAgain = false;  // Flaga dla eventu onclose
+    let action = "host";
     const canvas = document.getElementById("canvas");
     const board = new Board(canvas, canvas.offsetWidth, canvas.offsetHeight, 4, 4, 4, 70, 14, 3);
 
     let formData = JSON.parse(sessionStorage.getItem("hostData"));
-    if(formData === null) formData = JSON.parse(sessionStorage.getItem("joinData"));
-    if(formData === null) formData = JSON.parse(sessionStorage.getItem("localData"));
+    if(formData === null){
+        formData = JSON.parse(sessionStorage.getItem("joinData"));
+        action = "join";
+    }
+    if(formData === null){
+        formData = JSON.parse(sessionStorage.getItem("localData"));
+        action = "local";
+    }
     console.log(formData);
+    console.log(document.location);
 
     window.addEventListener("resize", () => board.resize());
+    document.getElementById("howToButton").onclick = function(){ document.getElementById("howToWrapper").style.display = "block"; };
+    document.getElementById("controlButton").onclick = function(){ document.getElementById("controlWrapper").style.display = "block"; };
+    document.getElementById("resultsButton").onclick = function(){ document.location.href = "../results"; }
     document.getElementById("apply").onclick = function(){
         board.setFieldsStyle(
             rgbToColor(document.getElementById("fillColor").value),
@@ -100,24 +112,37 @@
             document.getElementById("lineWidth").value
         );
     }
+    window.addEventListener("message", function(event) {
+        if(event.data === "closeModal"){
+            document.getElementById("howToWrapper").style.display = "none"; 
+            document.getElementById("controlWrapper").style.display = "none";  
+        }
+    });
     document.getElementById("canvas").addEventListener("dblclick", () =>{ console.log(board.chosenField); });
-    document.getElementById("ping").onclick = function(){
-        sendMessage("Ping");
-    }
 
-    let socket = new WebSocket(address + ":" + port);
+    if(!formData) return;
+    document.getElementById("ping").onclick = function(){ sendMessage(document.getElementById("cmd").value); }
+    if(!formData.port) port = formData.port;
+
+    let socket = new WebSocket(`ws://${address}:${port}`);
     console.log("stan: ", socket.readyState);
     socket.onopen = function() { 
         console.log('Połączono'); 
-        socket.send("Create 2 4,4,4 3"); 
+        if(action === "host") socket.send("Create " + formData.nOfPlayers + " " + formData.sizes + " " + formData.target); 
+        if(action === "join") socke.send("SetNick " + formData.nick);
     };
-    socket.onmessage = function(event) { 
-        console.log(`<p>Otrzymano: ${event.data}</p>`); 
-        if(!event.data) return;
+
+    socket.onmessage = onMessage(event.data);
+    socket.onclose = function() { onClose(); };
+    
+    function sendMessage(msg) { socket.send(msg); console.log("stan: ", socket.readyState);}
+    function onMessage(msg){
+        console.log(`Otrzymano: ${msg}`); 
+        if(!msg || msg == "") return;
         const args = event.data.split(" ");
 
-        switch(args[0]){
-            case "Port":
+        switch(args[0].toLowerCase()){
+            case "port":
                 if(!args[1]){
                     console.log("Nie podano portu.");
                     return;
@@ -126,15 +151,33 @@
                 connectAgain = true;
                 socket.close();
                 break;
+
+            case "refresh": break;
+            case "won": break;
+            case "joined": break;
+            case "left": break;
+            case "closed": break;
+            case "paused": break;
+            case "unpaused": break;
+            case "error": break;
+            case "ping": socket.send("Reping"); break;
+            case "reping": console.log("Reping"); break;
+            default: console.log("Incorrect message: " + msg); break;
         }
-    };
-    socket.onclose = function() { 
+    }
+
+    function onClose(){
         console.log("stan: ", socket.readyState);
         console.log('Rozłączono'); 
-        if(connectAgain)
-            socket = new WebSocket(address + ":" + port);
+        if (connectAgain) {
+            connectAgain = false;
+            socket = new WebSocket(`ws://${address}:${port}`);
+
+            socket.onopen = function() { console.log("Połączono ponownie!"); };
+            socket.onmessage = function(event) { onMessage(event.data); };
+            socket.onclose = function() { onClose(); };
+        }
         console.log("stan: ", socket.readyState);
-    };
-    function sendMessage(msg) { socket.send(msg); console.log("stan: ", socket.readyState);}
+    }
 
 </script>
