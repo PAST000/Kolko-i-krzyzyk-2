@@ -84,10 +84,10 @@
     document.getElementById("close").onclick = function() { window.parent.postMessage("closeModal", "*"); };
 
     document.getElementById("join").onclick = function() {
-        const prt = document.getElementById("port").value;
+        const prt = parseInt(document.getElementById("port").value, 10);
         const name = document.getElementById("nick").value;
 
-        if(prt ==="" || name === "") {
+        if(prt === NaN || prt < 0 || prt > 65535 || name === "") {
             document.getElementById("error").style.display = "block";
             return;
         }

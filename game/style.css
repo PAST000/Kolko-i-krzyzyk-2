@@ -101,7 +101,6 @@ main > aside{
     color: white;
     padding: 15px;
     box-sizing: border-box;
-    float: right;
 }
 
 main > section{
@@ -109,9 +108,7 @@ main > section{
     height: 100%;
     background-color: royalblue;
     color: white;
-    padding: 15px;
     box-sizing: border-box;
-    float: left;
 }
 
 .styleContainer{
@@ -147,4 +144,20 @@ input [type="range"]{
 iframe{
     width: 100%;
     height: 100%;
+}
+
+#paused{ 
+    color: rgb(192, 0, 0);
+}
+
+#info > p{
+    font-size: large;
+}
+
+#playersInfo{
+    margin: 0px 15px;
+}
+
+.playerWrapper > p{
+    margin: 0;
 }

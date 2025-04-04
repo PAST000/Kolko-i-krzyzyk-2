@@ -100,7 +100,7 @@ nav > button:hover{
 }
 
 .buttonsContainer{
-    width: 470px;
+    width: 500px;
     text-align: center;
 }
 
@@ -113,21 +113,17 @@ nav > button:hover{
     background-color: rgba(210, 210, 210, 0.6);
 }
 
-#localButton, #joinButton, #computerButton, #hostButton{
+#joinButton, #computerButton, #hostButton{
     color: white;
     background-color: transparent;
     border: none;
     font-size: 30px;
     margin: 5px;
+    padding: 10px;
 }
 
 #computerButton{
     color: gray;
-}
-
-#localButton::before{
-    content: url(resources/local.svg);
-    margin-right: 8px;
 }
 
 #joinButton::before{

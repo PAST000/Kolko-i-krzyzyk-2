@@ -14,15 +14,17 @@ export default class Board{
     #fields = [];
     #vertices = [];
     #pawns = [];
+    #separator = ',';
+    #playerIDs = [];
+    #pawnTypes = [];  
 
     constructor(cnv, cnvWidth, cnvHeight, X, Y, Z, size, prec, sens,
                 fillClr = new Color(0, 0, 120, 0.2), lineClr = new Color(0, 0, 180, 0.2), lineWdt = 0.1, pawnClr = new Color(40, 40, 40, 0.35)){
         this.length = parseFloat(size * X);  //
-        this.height = parseFloat(size * Y);  // Wymiary planszy
+        this.height = parseFloat(size * Y);  // Rozmiary planszy
         this.width = parseFloat(size * Z);   //
         this.singleSize = parseFloat(size);
         this.precision = parseInt(prec);
-        this.sensitivity = parseFloat(sens);
 
         this.canvas = cnv;
         this.canvasRect = this.canvas.getBoundingClientRect();
@@ -40,8 +42,10 @@ export default class Board{
         
         this.#pawns = Array.from({ length: this.X*this.Y*this.Z });
         this.layers = Array.from({ length: this.Z }, () => []);
-        this.chosenLayer = -1; // -1 oznacza brak wybranej warstwy
-        this.chosenField = -1; // -1 oznacza brak wybranego pola
+        this.chosenLayer = -1;  // -1 oznacza brak wybranej warstwy
+        this.chosenField = -1;  // -1 oznacza brak wybranego pola
+        this.#playerIDs = ['O', 'X', 'C'];
+        this.#pawnTypes = {'O': "Sphere", 'X': "Cross", 'C': "Cone"};
 
         this.#generateVertices();
         this.#generateFields();
@@ -96,7 +100,7 @@ export default class Board{
             this.draw();
         });
         
-        this.engine = new Engine(cnv, cnvWidth, cnvHeight, [...this.#fields], this.center, this.sensitivity);
+        this.engine = new Engine(cnv, cnvWidth, cnvHeight, [...this.#fields], this.center, parseFloat(sens));
     }
 
     #generateVertices(){
@@ -123,13 +127,18 @@ export default class Board{
     }
 
     addPawn(type, pos){
-        if(!pos instanceof Array) return;
-        if(pos.length < 3) return;
+        let id = pos;
+        console.log(type, pos);
+
+        if(pos instanceof Array){
+            if(pos.length < 3) return false;
+            id = this.arrToId(pos);
+        }
+        else if(!pos instanceof Number) return false;
+        else pos = this.idToArr(pos);
+
         type = type.toLowerCase();
-        let center = new Vertex(-this.singleSize*((this.X - 1)/2 - pos[0]),
-                                -this.singleSize*((this.Y - 1)/2 - pos[1]), 
-                                this.singleSize*((this.Z - 1)/2 - pos[2]));
-        let id = this.arrToId(pos);
+        let center = this.#fields[id].center;
 
         switch(type){
             case "cube":
@@ -151,6 +160,7 @@ export default class Board{
             case "pseudosphere":
                 this.#pawns[id] = new PseudoSphere(center, this.singleSize * 0.45, this.precision, this.pawnColor);
                 this.engine.addObject(this.#pawns[id]);
+                console.log(this.#pawns[id]);
                 break;
 
             case "cone":
@@ -159,6 +169,7 @@ export default class Board{
                 break;
             default: break;
         }
+        return true;
     }
 
     idToArr(id){
@@ -289,17 +300,42 @@ export default class Board{
                                                   this.#pawns[i].fillColor, this.#pawns[i].lineClr, this.#pawns[i].lineWidth);
     }
 
-    draw(){ this.engine.draw(); }
-
     setFieldsStyle(fillClr, lineClr, width){
         width = parseFloat(width);
         if(!(fillClr instanceof Color) || !(lineClr instanceof Color) || typeof(width) !== "number") return false;
+
         for(let i = 0; i < this.#fields.length; i++){
-            this.#fields[i].changeFillColor(fillClr);
-            this.#fields[i].changeLineColor(lineClr);
+            if(this.idToArr(i)[2] === this.chosenLayer){
+                this.#fields[i].fillColor.setOpacity(fillClr.a);
+                this.#fields[i].lineColor.setOpacity(lineClr.a);
+            }
+            else{
+                this.#fields[i].changeFillColor(fillClr);
+                this.#fields[i].changeLineColor(lineClr);
+            }
             this.#fields[i].changeLineWidth(width);
         }
         this.engine.setStyle(fillClr, lineClr, width);
         this.draw();
     }
+
+    updatePawns(txt){
+        let board = txt.split(this.#separator);
+        console.log(board, board.length, this.#pawns.length);
+        if(board.length < this.#pawns.length) return false;
+
+        for(let i = 0; i < board.length; i++){
+            console.log(board[i], this.#playerIDs.includes(board[i]), this.#pawnTypes[board[i]]);
+            if(!this.#playerIDs.includes(board[i])){
+                if(this.#pawns[i] !== undefined || this.#pawns[i] !== null)
+                    this.#pawns[i] = null;
+            }
+            else this.addPawn(this.#pawnTypes[board[i]], i);
+        }
+        return true;
+    }
+
+    draw(){ this.engine.draw(); }
+    setSensitivity(sens){ this.engine.setSensitivity(sens); }
+    getSizes(){ return [this.X, this.Y, this.Z]; }
 };

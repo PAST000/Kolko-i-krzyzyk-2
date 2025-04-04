@@ -12,7 +12,7 @@ import Cone from "./Objects/Cone.js";
 export default class Engine{
     #cnv; 
     #ctx;
-    #keys = [];  // Wciśniete klawisze
+    #keys = {};  // Wciśniete klawisze
     #objects;
     projections = [];
     vertices = [];    // Do obracania
@@ -32,6 +32,10 @@ export default class Engine{
         this.defaultLineColor = new Color(0, 0, 100, 0.12);
         this.defaultLineWidth = 1;
 
+        this.rotationX = 0;  //
+        this.rotationY = 0;  // Różnica obrótu od stanu początkowego
+        this.rotationZ = 0;  //
+
         this.mouseDown = false;
         this.mouseX = 0;   // Koordynaty w których kliknięto mysz
         this.mouseY = 0;   //
@@ -48,12 +52,10 @@ export default class Engine{
             }
             if (this.#keys["ArrowRight"]) rotX -= this.sensitivityFactor * this.sensitivity * Math.PI / 180;
             if (this.#keys["ArrowLeft"]) rotX += this.sensitivityFactor * this.sensitivity * Math.PI / 180;
-        
             if (this.#keys["ShiftRight"] || this.#keys["ShiftLeft"]) {  
                 if (this.#keys["ArrowRight"]) rotZ += this.sensitivityFactor * this.sensitivity * Math.PI / 180;
                 if (this.#keys["ArrowLeft"]) rotZ -= this.sensitivityFactor * this.sensitivity * Math.PI / 180;
             }
-        
             if (rotX !== 0 || rotY !== 0 || rotZ !== 0) {
                 this.rotateAll(rotX, rotY, rotZ);
                 this.draw();
@@ -76,7 +78,6 @@ export default class Engine{
                 }
             }
         });
-        
         document.addEventListener("keyup", (e) => {
             this.#keys[e.code] = false;
             if (!Object.values(this.#keys).includes(true)) this.isRotating = false;
@@ -100,7 +101,6 @@ export default class Engine{
             this.setStyle(this.#objects[i].fillColor === undefined ? this.defaultFillColor : this.#objects[i].fillColor, 
                           this.#objects[i].lineColor === undefined ? this.defaultLineColor : this.#objects[i].lineColor,
                           this.#objects[i].lineWidth === undefined ? this.defaultLineWidth : this.#objects[i].lineWidth);
-            //this.setStyle(this.defaultFillColor, this.lineColor, this.lineWidth);
 
             for(let j = 0; j < this.projections.length; j++){
                 this.#ctx.beginPath();
@@ -131,6 +131,7 @@ export default class Engine{
     }
 
     addObject(obj){
+        this.rotateObj(obj, this.rotationX, this.rotationY, this.rotationZ);
         this.#objects.push(obj);
         this.updateVertices();
         return this.#objects.length - 1;
@@ -138,23 +139,22 @@ export default class Engine{
 
 
     rotateAll(rotX, rotY, rotZ = 0){
+        this.rotationX = (this.rotationX + rotX) % (2*Math.PI);
+        this.rotationY = (this.rotationY + rotY) % (2*Math.PI);
+        this.rotationZ = (this.rotationZ + rotZ) % (2*Math.PI);
+
         for(let i = 0; i < this.vertices.length; i++)
             this.rotateVert(this.vertices[i], rotX, rotY, rotZ);
     }
 
-    rotate(obj, vert, rotX, rotY){
-        const vertex = this.#objects[obj].vertices[vert]; 
-        const originalX = vertex.x;
-        const originalY = vertex.y;
-        const originalZ = vertex.z;
+    rotateObj(obj, rotX, rotY, rotZ = 0){
+        if(typeof obj === "number"){
+            if(obj < 0 || obj >= this.#objects.length)
+            obj = this.#objects[obj];
+        }
 
-        // Obrót wokół osi Y 
-        vertex.x = originalX * Math.cos(rotX) - originalZ * Math.sin(rotX);
-        vertex.z = originalX * Math.sin(rotX) + originalZ * Math.cos(rotX);
-
-        // Obrót wokół osi X 
-        vertex.y = originalY * Math.cos(rotY) - vertex.z * Math.sin(rotY);
-        vertex.z = originalY * Math.sin(rotY) + vertex.z * Math.cos(rotY);
+        for(let i = 0; i < obj.vertices.length; i++)
+            this.rotateVert(obj.vertices[i], rotX, rotY, rotZ);
     }
 
     rotateVert(vert, rotX, rotY, rotZ = 0){
@@ -202,7 +202,7 @@ export default class Engine{
     setStyle(fillColor = this.defaultFillColor, lineColor = this.defaultLineColor, lineWidth = this.defaultLineWidth){
         if(fillColor instanceof Color) this.#ctx.fillStyle = fillColor.toString();
         if(lineColor instanceof Color) this.#ctx.strokeStyle = lineColor.toString();
-        if(lineWidth instanceof Number) this.#ctx.lineWidth = lineWidth.toString();
+        if(typeof lineWidth === "number" && lineWidth !== NaN) this.#ctx.lineWidth = lineWidth;
     }
 
     updateCenter(){
@@ -214,7 +214,7 @@ export default class Engine{
         return [Cube, Cuboid, Plane, Cross, PseudoSphere, Cone].some(type => obj instanceof type);
     }
 
-    setSensitivity(sens){ this.sensitivity = sens; }
+    setSensitivity(sens){ this.sensitivity = parseFloat(sens); }
     setSensitivityFactor(fac){ this.sensitivityFactor = fac; }
     setPrecision(prec) { this.precision = prec;}
 };

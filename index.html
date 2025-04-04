@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="description" content="Kółko i krzyżyk 2">
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta http-equiv="Access-Control-Allow-Origin" content="modalLocal.html">
 
     </meat>
     <link rel="icon" type="image/x-icon" href="resources/icon.ico">
@@ -14,7 +13,7 @@
 </head>
 <body>
     <header>
-        <img src="resources/ikona2.png" alt="Nie udało się załadować ikony">
+        <img src="resources/icon.png" alt="Nie udało się załadować ikony">
         <h1>Kółko i krzyżyk 2</h1>
         <nav>
             <button id="howToButton">Jak grać</button> 
@@ -28,9 +27,6 @@
         <article>
             <section class="buttonsContainer">
                 <div class="buttonWrapper">
-                    <button id="localButton">Gra na tym urządzeniu</button>
-                </div>
-                <div class="buttonWrapper">
                     <button id="joinButton">Dołącz do gry wieloosobowej</button>
                 </div>
                 <div class="buttonWrapper">
@@ -43,15 +39,14 @@
         </article>
     </main>
     <footer>
-        Adam Stachowicz 2024
+        Adam Stachowicz 2025
     </footer>
 
     <div id="howToWrapper" class="modalWrapper"> <iframe src="modals/modalHowTo.html" title="howToPlay"></iframe> </div>
     <div id="controlWrapper" class="modalWrapper"> <iframe src="modals/modalControl.html" title="control"></iframe> </div>
 
-    <div id="localWrapper" class="modalWrapper"> <iframe src="modals/modalLocal.html" title="local"></iframe> </div>
     <div id="joinWrapper" class="modalWrapper"> <iframe src="modals/modalJoin.html" title="join"></iframe> </div>
-    <div id="hostWrapper" class="modalWrapper"> <iframe src="modals/modalHost.html" title="local"></iframe> </div>
+    <div id="hostWrapper" class="modalWrapper"> <iframe src="modals/modalHost.html" title="host"></iframe> </div>
     <div id="computerWrapper" class="modalWrapper"> <iframe src="modals/modalComputer.html" title="computer"></iframe> </div>
 </body>
 </html>
@@ -61,7 +56,6 @@
     document.getElementById("controlButton").onclick = function(){ document.getElementById("controlWrapper").style.display = "block"; };
     document.getElementById("resultsButton").onclick = function(){ document.location.href = "results"; }
 
-    document.getElementById("localButton").onclick = function(){ document.getElementById("localWrapper").style.display = "block"; };
     document.getElementById("joinButton").onclick = function(){ document.getElementById("joinWrapper").style.display = "block"; };
     document.getElementById("hostButton").onclick = function(){ document.getElementById("hostWrapper").style.display = "block"; };
     document.getElementById("computerButton").onclick = function(){ /*document.getElementById("computerWrapper").style.display = "block";*/ };
@@ -70,7 +64,6 @@
         if(event.data === "closeModal"){
             document.getElementById("howToWrapper").style.display = "none"; 
             document.getElementById("controlWrapper").style.display = "none"; 
-            document.getElementById("localWrapper").style.display = "none"; 
             document.getElementById("joinWrapper").style.display = "none"; 
             document.getElementById("hostWrapper").style.display = "none"; 
             document.getElementById("computerWrapper").style.display = "none"; 

@@ -9,28 +9,11 @@
     <link rel="icon" type="image/x-icon" href="../resources/icon.ico">
     <title>Kółko i krzyżyk 2</title>
     <link rel="stylesheet" href="style.css">
-
-    <script>
-        function changeFillColor(){
-            const preview = document.getElementById("previewFill");
-            preview.style.backgroundColor = document.getElementById("fillColor").value;
-            preview.style.opacity = (document.getElementById("fillAlpha").value/100);
-        }
-        function changeLineColor(){
-            const preview = document.getElementById("previewLine");
-            preview.style.backgroundColor = document.getElementById("lineColor").value;
-            preview.style.opacity = (document.getElementById("lineAlpha").value/100);
-        }
-
-        window.onload = function() {
-            changeFillColor();
-            changeLineColor();
-        }
-    </script>
+    <script src="script.js"></script>
 </head>
 <body>
     <header>
-        <img src="../resources/ikona2.png" alt="Nie udało się załadować ikony">
+        <img src="../resources/icon.png" alt="Nie udało się załadować ikony">
         <h1>Kółko i krzyżyk 2</h1>
         <nav>
             <button id="howToButton">Jak grać</button> 
@@ -41,7 +24,20 @@
         </nav>
     </header>
     <main>
-        <section></section>
+        <section id="info">
+            <h2 id="paused">Zapauzowane</h2>
+            <h3 id="port">Port: </h3>
+            <fieldset id="playersInfo">
+                <legend>Gracze</legend>
+                <div id="playersContainer"></div>
+            </fieldset>
+            <p id="turn">Tura gracza: 0</p>
+            <p id="yourID">Twoje ID: </p>
+            <p id="target">Cel: </p>
+
+            <button id="ping">Send</button>
+            <input type="text" id="cmd">
+        </section>
         <canvas id="canvas"></canvas>
         <aside>
             <div class="styleContainer">
@@ -58,23 +54,26 @@
             </div>
             <div class="styleContainer">
                 <label for="lineWidth">Grubość linii: </label>
-                <input type="number" name="lineWidth" id="lineWidth" value="1" min="0" max="10"><br>
+                <input type="number" name="lineWidth" id="lineWidth" value="1" min="0.1" max="10" step="0.1"><br>
             </div>
             <div class="styleContainer">
                 <label for="precision">Precyzja: </label>
                 <input type="range" name="precision" id="precision" min="4" max="30"><br>
             </div>
+            <div class="styleContainer">
+                <label for="sensitivity">Czułość: </label>
+                <input type="range" name="sensitivity" id="sensitivity" min="0.2" max="12" step="0.1"><br>
+            </div>
             <button id="apply">Zastosuj</button>
-            <button id="ping">Ping</button>
-            <input type="text" id="cmd">
         </aside>
     </main>
     <footer>
-        Adam Stachowicz 2024
+        Adam Stachowicz 2025
     </footer>
    
     <div id="howToWrapper" class="modalWrapper"> <iframe src="../modals/modalHowTo.html" title="howToPlay"></iframe> </div>
     <div id="controlWrapper" class="modalWrapper"> <iframe src="../modals/modalControl.html" title="control"></iframe> </div>
+    <div id="winWrapper" class="modalWrapper"> <iframe src="../modals/modalWin.html" title="win"></iframe> </div>
 </body>
 </html>
 
@@ -82,60 +81,72 @@
     import Board from "../engine/Board.js";
     import { rgbToColor } from "../engine/Objects/Color.js";
 
+    const ARGS_DDELIMETR = ' ';
+    const SIZES_DELIMETER = ',';
+
     let address = "localhost";
     let port = "3310";
     let connectAgain = false;  // Flaga dla eventu onclose
     let action = "host";
+    let turn = 0;
+    let ID = 0;
+    let target;
+    let admin = false;
+
     const canvas = document.getElementById("canvas");
-    const board = new Board(canvas, canvas.offsetWidth, canvas.offsetHeight, 4, 4, 4, 70, 14, 3);
+    let board = new Board(canvas, canvas.offsetWidth, canvas.offsetHeight, 4, 4, 4, 70, 14, 3);
+    document.getElementById("howToButton").onclick = function(){ document.getElementById("howToWrapper").style.display = "block"; };
+    document.getElementById("controlButton").onclick = function(){ document.getElementById("controlWrapper").style.display = "block"; };
+    document.getElementById("resultsButton").onclick = function(){ document.location.href = "../results"; }
 
     let formData = JSON.parse(sessionStorage.getItem("hostData"));
     if(formData === null){
         formData = JSON.parse(sessionStorage.getItem("joinData"));
         action = "join";
     }
-    if(formData === null){
-        formData = JSON.parse(sessionStorage.getItem("localData"));
-        action = "local";
-    }
     console.log(formData);
-    console.log(document.location);
 
     window.addEventListener("resize", () => board.resize());
-    document.getElementById("howToButton").onclick = function(){ document.getElementById("howToWrapper").style.display = "block"; };
-    document.getElementById("controlButton").onclick = function(){ document.getElementById("controlWrapper").style.display = "block"; };
-    document.getElementById("resultsButton").onclick = function(){ document.location.href = "../results"; }
     document.getElementById("apply").onclick = function(){
+        let fillAlpha = document.getElementById("fillAlpha").value/100;
+        let lineAlpha = document.getElementById("lineAlpha").value/100;
+
         board.setFieldsStyle(
-            rgbToColor(document.getElementById("fillColor").value),
-            rgbToColor(document.getElementById("lineColor").value),
+            rgbToColor(document.getElementById("fillColor").value, fillAlpha),
+            rgbToColor(document.getElementById("lineColor").value, lineAlpha),
             document.getElementById("lineWidth").value
         );
+        board.setSensitivity(parseFloat(document.getElementById("sensitivity").value));
     }
-    window.addEventListener("message", function(event) {
-        if(event.data === "closeModal"){
-            document.getElementById("howToWrapper").style.display = "none"; 
-            document.getElementById("controlWrapper").style.display = "none";  
-        }
-    });
-    document.getElementById("canvas").addEventListener("dblclick", () =>{ console.log(board.chosenField); });
-
-    if(!formData) return;
     document.getElementById("ping").onclick = function(){ sendMessage(document.getElementById("cmd").value); }
-    if(!formData.port) port = formData.port;
+    document.getElementById("canvas").addEventListener("dblclick", () =>{ 
+        let id = board.chosenField;
+        if(id < 0) return false;
+        sendMessage("Put " + board.idToArr(id).join(SIZES_DELIMETER));
+    });
 
+    if(typeof formData.port === "number") port = formData.port;
+    console.log(`ws://${address}:${port}`);
     let socket = new WebSocket(`ws://${address}:${port}`);
+    document.getElementById("port").innerHTML = "Port: " + port;
     console.log("stan: ", socket.readyState);
+
+    sessionStorage.setItem("winData", JSON.stringify({ id : 1, nick : "Adam" }));
+    document.getElementById("winWrapper").style.display = "block";
+
     socket.onopen = function() { 
         console.log('Połączono'); 
-        if(action === "host") socket.send("Create " + formData.nOfPlayers + " " + formData.sizes + " " + formData.target); 
-        if(action === "join") socke.send("SetNick " + formData.nick);
+        if(action === "host"){
+            socket.send("Create " + formData.nOfPlayers + " " + formData.sizes + " " + formData.target); 
+            admin = true;
+        }
+        if(action === "join") socket.send("Join " + formData.nick);
     };
 
-    socket.onmessage = onMessage(event.data);
+    socket.onmessage = (event) => { onMessage(event.data); };
     socket.onclose = function() { onClose(); };
     
-    function sendMessage(msg) { socket.send(msg); console.log("stan: ", socket.readyState);}
+    function sendMessage(msg) { socket.send(msg);}
     function onMessage(msg){
         console.log(`Otrzymano: ${msg}`); 
         if(!msg || msg == "") return;
@@ -150,19 +161,62 @@
                 port = args[1];
                 connectAgain = true;
                 socket.close();
+                document.getElementById("port").innerHTML = "Port: " + port;
+                break;
+            case "refresh": 
+                if(args.length < 7 || parseInt(args[4]) === NaN || parseInt(args[5]) === NaN || parseInt(args[6]) === NaN){
+                    console.log("Incorrect refresh: ", args);
+                    return false;
+                }
+
+                let sizes = args[2].trim().split(',');
+                let boardSizes = board.getSizes();
+                let areSizesEqual = true;
+
+                if(sizes.length === undefined || sizes.length < 2){
+                    console.log("Incorrect refresh: ", args);
+                    return false;
+                }
+                if(sizes.length !== boardSizes.length)
+                    areSizesEqual = false;
+                else
+                    for(let i = 0; i < sizes.length; i++)
+                        if(sizes[i] != boardSizes[i]){
+                            areSizesEqual = false;
+                            break;
+                        }
+
+                if(!areSizesEqual)
+                    board = new Board(canvas, canvas.offsetWidth, canvas.offsetHeight, sizes[0], sizes[1], sizes[2], 
+                                      70, document.getElementById("precision").value, 3);
+                else board.updatePawns(args[3]);
+
+                target = parseInt(args[4]); 
+                turn = parseInt(args[5]);
+                ID = parseInt(args[6]);
+                refreshInfo(JSON.parse(args[1]), target, turn, ID, admin);
+            break;
+            case "won": 
+                if(args[1] === undefined || args[2] === undefined){
+                    console.log("Błędna komenda Won: ", args);
+                    return;
+                }
+                sessionStorage.setItem("winData", JSON.stringify({ id : args[1], nick : args[2] }));
+                document.getElementById("winWrapper").style.display = "block"; 
                 break;
 
-            case "refresh": break;
-            case "won": break;
             case "joined": break;
             case "left": break;
             case "closed": break;
-            case "paused": break;
-            case "unpaused": break;
+            case "kicked": break;
+            case "started": document.getElementById("paused").style.display = "none"; break;
+            case "paused": document.getElementById("paused").style.display = "block"; break;
+            case "unpaused": document.getElementById("paused").style.display = "none"; break;
             case "error": break;
             case "ping": socket.send("Reping"); break;
             case "reping": console.log("Reping"); break;
-            default: console.log("Incorrect message: " + msg); break;
+            case "youareadmin": break; // TODO
+            default: console.log("Incorrect message: " + msg + " " + msg.toLowerCase()); break;
         }
     }
 
@@ -173,7 +227,10 @@
             connectAgain = false;
             socket = new WebSocket(`ws://${address}:${port}`);
 
-            socket.onopen = function() { console.log("Połączono ponownie!"); };
+            socket.onopen = function() { 
+                if(admin && formData.nick)
+                    socket.send("Join " + formData.nick);
+            };
             socket.onmessage = function(event) { onMessage(event.data); };
             socket.onclose = function() { onClose(); };
         }

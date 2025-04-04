@@ -9,8 +9,8 @@ Z serwera:
 
 Do gry (użytkownik):
     -Put cords[]
+    -Join nick
     -SetNick nick
-    -Leave 
     -Ping/Reping
 
 Do gry (admin):
@@ -20,22 +20,27 @@ Do gry (admin):
     -ClearPlayer id
     -Kick id
     -Put cords[]
-    -SetNick nick  // Administrator ma domyślnie nick admin, można go zmienić
     -SetTurn id 
-    -Leave  
+    -SetNick nick id  // Jeśli brak 2. argumentu ustaw sobie
+    -Join nick
     -Pause/Unpause 
     -Ping/Reping
  
 Z gry do użytkownika:
     -Error   type txt
-    -Refresh players[](id => nick) board target turn(id) yourID
-    -Won     name id 
-    -Joined  name id  // Brak argumentów oznacza potwierdzenie dołączenia
-    -Left    name id
+    -Refresh players[](id => nick) sizes board target turn(id) yourID
+    -Won     idGracza name idPola idKierunku 
+    -Tie
+    -Joined   // Potwierdzenie dołączenia
     -Closed
     -Kicked
+    -Started
     -Paused/Unpaused 
     -Ping/Reping
+
+Z gry do admina:  (+ Z gry do użytkownika) 
+    -YouAreAdmin   // Tylko przy dołączeniu lub gdy został wybrany nowy admin
+
 
 ids = ['O', 'X', 'P']  // Kula, krzyżyk, piramida
 
@@ -52,15 +57,16 @@ Typy błędów:
     2x Błąd zwrócony z planszy (+Tworzenie planszy)
 	20 Błąd przy tworzeniu planszy   // Opis błędu jest 2. argumentem
 	21 Niepoprawna ilość graczy
-	22 Nie udało się położyć pionka  // Prawie na pewno złe koordynaty, z racji na istnienie Error 23
+	22 Nie udało się położyć pionka  // Prawie na pewno złe koordynaty lub zajęte pole, z racji na istnienie Error 23
 	23 Nie twoja tura
 
     3x Błąd przy dołączaniu do gry
 	30 Gra jest pełna
 	31 Nie podano nicku lub błędny nick
 	32 Podano błędny port
-	33 Nick jest zajęty  // W tym jeśli nick === "admin"
-
+	33 Nick jest zajęty  
+	34 Już dołączyłeś
+	
     4x Błąd przy tworzeniu gry
 	40 Błąd zwrócony z gry (Opis błędu jest 2. argumentem)
 	41 Serwer pełny

@@ -5,10 +5,11 @@
         border-radius: 10px;
         padding: 20px;
         padding-top: 10px;
-        width: 25%;
+        width: 35%;
         background-color: rgb(101, 208, 250);
         margin: auto;
         margin-top: 30vh;
+        font-size: 18px;
     }
 
     #close{
@@ -17,6 +18,12 @@
         font-weight: bold;
         font-size: 22px;
         border: 0;
+    }
+
+    img{
+        float: right;
+        width: 30%;
+        margin: 5px;
     }
 </style>
 
@@ -27,7 +34,19 @@
 
 <section id="modalWrapper">
     <button id="close">&times</button><br>
-    <p>Bla bla literki</p>
+    <img src="../resources/arrows.png" alt="">
+    <p>
+        Sterowanie odbywa się za pomocą strzałek na klawiaturze. 
+        Przy użyciu strzałek góra-dół dokonujemy obrotu wokół osi X (od lewej strony ekranu do prawej).
+        A przy użyciu strzałek lewo-prawo dokonuje obrotu wokół osi Y (od góry do dołu ekranu).
+        Warto wspomnieć o możliwości przytrzymania klawisza "SHIFT", wtedy strzałki lewo-prawo
+        dokonują obrotu wokół osi Z (oś ta, można powiedzieć "przechodzi" przez ekran).
+        <br>
+        Pole, do postawienia pionka, wybieramy w następujący sposób:
+        wybieramy dowolne pole z wartswy (wartswy ułożone są według osi Z) do której należy pole, które chcemy wybrać.
+        Następnie wybieramy już konkretne pole z podświetlonej warstwy. 
+        Aby wysłać polecenie postawienia pionka na polu wystarczy kliknąć lewy przycisk myszy dwa razy.
+    </p>
 </section>
 </html>
 
