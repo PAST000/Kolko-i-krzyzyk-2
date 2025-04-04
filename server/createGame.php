@@ -1,5 +1,6 @@
 <?php
 require "game.php";
+//require "game2.php";
 // argumenty: portSerwera, portGry, liczbaGraczy, rozmiary, cel
 // rozmiary to ciąg znaków, wartości są rozdzielone przecinkami
 

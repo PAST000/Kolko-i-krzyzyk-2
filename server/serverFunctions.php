@@ -12,11 +12,13 @@ function readMessage($socket){
 
         if($payloadLength === 126){   // Jeśli 126 to kolejne 2 bajty to faktyczna długość payload'u
             $data .= socket_read($socket, 2); 
+            if (!$data || strlen($data) !== 2) return false;
             $payloadLength = ord($data[0])*256 + ord($data[1]);
             $offset = 8;
         }       
         else if($payloadLength === 127){   // Jeśli 127 to kolejne 8 bajtów to faktyczna długość payload'u
             $data .= socket_read($socket, 8);
+            if (!$data || strlen($data) !== 8) return false;
             $payloadLength = (ord($data[0]) << 56) | (ord($data[1]) << 48) | (ord($data[2]) << 40) | (ord($data[3]) << 32) |
                             (ord($data[4]) << 24) | (ord($data[5]) << 16) | (ord($data[6]) << 8)  |  ord($data[7]);
             $offset = 14;
@@ -56,13 +58,26 @@ function encodeMessage($message) {
 }
 
 function send($txt, $sockets, $skip = []){ 
-    $message = encodeMessage($txt);
-    file_put_contents("logsKiK2/send.txt", $txt, FILE_APPEND);     // FILE LOG
-    foreach($sockets as $socket) 
-        if(!in_array($socket, $skip) && $socket) {
-            file_put_contents("logsKiK2/actuallySend.txt", $txt, FILE_APPEND);     // FILE LOG
-            socket_write($socket, $message);
+    try{
+        $message = encodeMessage($txt);
+        file_put_contents("logsKiK2/send.txt", $txt, FILE_APPEND);     // FILE LOG
+        foreach($sockets as $socket){
+            if(!is_resource($socket) || socket_last_error($socket) !== 0) continue;
+
+            if(!in_array($socket, $skip) && $socket) {
+                file_put_contents("logsKiK2/actuallySend.txt", $txt, FILE_APPEND);     // FILE LOG
+                $totalSent = 0;
+                $length = strlen($message);
+                while ($totalSent < $length) {
+                    $sent = socket_write($socket, substr($message, $totalSent));
+                    if ($sent === false) return false;
+                    $totalSent += $sent;
+                }
+            }
         }
+    }
+    catch(Exception $e){ return false; }
+    return true;
 }
 
 function handshake(&$server, &$clients){
@@ -72,6 +87,11 @@ function handshake(&$server, &$clients){
     $clients[] = $newClient;
 
     $request = socket_read($newClient, 5000);
+    if(!$request){
+        unsetSocket($newClient, $clients, $server);
+        return false;
+    }
+
     preg_match('#Sec-WebSocket-Key: (.*)\r\n#', $request, $matches);
     file_put_contents("logsKiK2/serverHandshakes.txt", $request, FILE_APPEND);             // FILE LOG
 
@@ -97,10 +117,24 @@ function unsetSocket(&$socket, &$clients, &$server){
         if($socket !== $server){
             socket_shutdown($socket);
             socket_close($socket);
-            $clients = array_filter($clients, function ($client) use ($socket) {
-                return $client !== $socket;
-            });
-            $clients = array_values($clients); 
+            
+            if(!empty($clients)){
+                $clients = array_filter($clients, function ($client) use ($socket) {
+                    return $client !== $socket;
+                });
+                $clients = array_values($clients); 
+            }
+        }
+    }
+    catch(Exception $e) {}
+}
+
+function unsetSocket2(&$socket, &$server){
+    try{
+        send("Closed", [$socket], [$server]);
+        if($socket !== $server && is_resource($socket)){
+            socket_shutdown($socket);
+            socket_close($socket);
         }
     }
     catch(Exception $e) {}
