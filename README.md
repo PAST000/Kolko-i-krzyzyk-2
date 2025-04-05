@@ -4,7 +4,7 @@ This is a WebSocket-based game server built with **Ratchet** in PHP. It supports
 
 ---
 
-##  Features
+## 🚀 Features
 
 - Real-time multiplayer gameplay via WebSockets
 - Admin-controlled game settings
