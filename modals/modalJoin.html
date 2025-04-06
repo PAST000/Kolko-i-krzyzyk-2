@@ -73,7 +73,7 @@
     <button id="close">&times</button><br>
     <p id="error">Wprowadź poprawne dane</p>
     <label for="port">Port:</label><br>
-    <input type="text" id="port" name="port" value="3310"><br>
+    <input type="text" id="port" name="port"><br>
     <label for="nick">Nick:</label><br>
     <input type="text" id="nick" name="nick"><br>
     <input type="submit" id="join" value="Dołącz">
@@ -84,16 +84,16 @@
     document.getElementById("close").onclick = function() { window.parent.postMessage("closeModal", "*"); };
 
     document.getElementById("join").onclick = function() {
-        const port = document.getElementById("port").value;
-        const nick = document.getElementById("nick").value;
-        const address = "127.0.0.1";
+        const prt = parseInt(document.getElementById("port").value, 10);
+        const name = document.getElementById("nick").value;
 
-        if(address === "" || port ==="" || nick === "") {
+        if(prt === NaN || prt < 0 || prt > 65535 || name === "") {
             document.getElementById("error").style.display = "block";
             return;
         }
 
-        sessionStorage.setItem("joinData", JSON.stringify({ port, nick }));
+        sessionStorage.clear();
+        sessionStorage.setItem("joinData", JSON.stringify({ port : prt, nick : name }));
         window.parent.postMessage("closeModal", "*"); 
         window.parent.location.href = "../game";
     };

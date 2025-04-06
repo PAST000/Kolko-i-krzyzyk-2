@@ -21,9 +21,12 @@ class Direction{
         for($i = 0; $i < $this->size; $i++){  //Sprawdzenie czy same 0
             if($this->arr[$i] !== 0) break;
             else    
-                if($i === $this->size)
+                if($i === $this->size - 1)
                     $this->arr[$i] += 1;
         }
     }
+
+    function getDirection(){ return $this->arr; }
+    function getSize(){ return $this->size; }
 }
 ?>

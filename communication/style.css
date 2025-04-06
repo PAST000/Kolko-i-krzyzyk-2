@@ -7,14 +7,26 @@ body,html{
     font-family: Arial;
 }
 
-iframe{
-    border: 0;
+header{
+    width: 100%;
+    box-sizing: border-box;
+    text-align: center;
+    background-color: rgb(0, 0, 146);
+    color: white;
+    padding-top: 5px;
 }
 
-#headerWrapper{
-    box-sizing: border-box;
-    width: 100%;
-    height: 94px;
+header > img{
+    width: 60px;
+    height: 60px;
+    position: relative;
+    top: 15px;
+}
+
+h1{
+    margin: 0;
+    font-size: 4vh;
+    display: inline-block;
 }
 
 main{
@@ -23,6 +35,8 @@ main{
     flex-grow: 1;
     text-align: center;
     background-color: deepskyblue;
+    overflow-y: scroll;
+    padding: 10px 0;
 }
 
 article{
@@ -39,9 +53,9 @@ footer{
     box-sizing: border-box;
     text-align: right;
     color: white;
-    font-size: 18px;
+    font-size: 1.5vh;
     background-color: #222222;
-    padding: 2%;
+    padding: 1.5%;
 }
 
 nav{
@@ -52,6 +66,7 @@ nav{
     padding: 5px 20px 10px;
     color: white;
     font-size: 0px;
+    margin-top: 25px;
 }
 
 nav > button{
@@ -87,8 +102,8 @@ nav > button:hover{
 }
 
 .buttonsContainer{
-    width: 380px;
-    text-align: left;
+    width: 470px;
+    text-align: center;
 }
 
 .buttonWrapper{
@@ -100,7 +115,7 @@ nav > button:hover{
     background-color: rgba(210, 210, 210, 0.6);
 }
 
-#local, #multi, #computer{
+#localButton, #joinButton, #computerButton, #hostButton{
     color: white;
     background-color: transparent;
     border: none;
@@ -108,17 +123,42 @@ nav > button:hover{
     margin: 5px;
 }
 
-#local::before{
-    content: url(../resources/local.svg);
+#computerButton{
+    color: gray;
+}
+
+#localButton::before{
+    content: url(resources/local.svg);
     margin-right: 8px;
 }
 
-#multi::before{
-    content: url(../resources/multi.svg);
+#joinButton::before{
+    content: url(resources/multi.svg);
     margin-right: 8px;
 }
 
-#computer::before{
-    content: url(../resources/computer.svg);
+#hostButton::before{
+    content: url(resources/gear.svg);
     margin-right: 8px;
+}
+
+#computerButton::before{
+    content: url(resources/computer.svg);
+    margin-right: 8px;
+}
+
+.modalWrapper{
+    background-color: rgba(0,0,0,0.4); 
+    width: 100%;
+    height: 100%;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    display: none;
+}
+
+iframe{
+    width: 100%;
+    height: 100%;
 }

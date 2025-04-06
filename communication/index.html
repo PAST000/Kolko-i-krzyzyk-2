@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="description" content="Kółko i krzyżyk 2">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Access-Control-Allow-Origin" content="modalLocal.html">
+
+    </meat>
+    <link rel="icon" type="image/x-icon" href="../resources/icon.ico">
+    <title>Kółko i krzyżyk 2</title>
+    <link rel="stylesheet" href="style.css">
+
+</head>
+<body>
+    <header>
+        <img src="../resources/icon.png" alt="Nie udało się załadować ikony">
+        <h1>Kółko i krzyżyk 2</h1>
+        <nav>
+            <button id="howToButton">Jak grać</button> 
+            <div class="line"></div>
+            <button id="controlButton">Sterowanie</button> 
+            <div class="line"></div>
+            <button id="resultsButton">Wyniki</button> 
+        </nav>
+    </header>
+    <main>
+        Do serwera: <br/>
+            -Create numOfPlayers sizes[] target  // "Zwraca" port <br/>
+            -Ping/Reping <br/>
+        <br/>
+        Z serwera: <br/>
+            -Error type  // Opcjonalnie opis słowny <br/>
+            -Port port   // "Zwrot" z Create <br/>
+            -Ping/Reping
+        <br/>
+        Do gry (użytkownik): <br/>
+            -Put cords[] <br/>
+            -Join nick <br/>
+            -SetNick nick <br/>
+            -Ping/Reping <br/>
+        <br/>
+        Do gry (admin): <br/>
+            -Create numOfPlayers sizes[] target  <br/>
+            -Drop    // Koniec gry <br/>
+            -Clear position[] <br/>
+            -ClearPlayer id <br/>
+            -Kick id <br/>
+            -Put cords[] <br/>
+            -SetTurn id <br/>
+            -SetNick nick id  // Jeśli brak 2. argumentu ustaw samemu sobie <br/>
+            -Join nick <br/>
+            -AddBot nick <br/>
+            -Pause/Unpause <br/>
+            -Ping/Reping <br/>
+        <br/>
+        Z gry do użytkownika: <br/>
+            -Error   type txt <br/>
+            -Refresh players[](id => nick) sizes board target turn(id) yourID <br/>
+            -Won     idGracza name idPola idKierunku <br/>
+            -Tie <br/>
+            -Joined   // Potwierdzenie dołączenia <br/>
+            -Closed <br/>
+            -Kicked <br/>
+            -Started <br/>
+            -Paused/Unpaused <br/>
+            -Ping/Reping <br/>
+        <br/>
+        Z gry do admina:  (+ Z gry do użytkownika) <br/>
+            -YouAreAdmin   // Tylko przy dołączeniu lub gdy został wybrany nowy admin <br/>
+        <br/>
+        ids = ['O', 'X', 'P']  // Kula, krzyżyk, piramida <br/>
+        <br/>
+        Typy błędów: <br/>
+            0x Błędy ogólne <br/>
+                00 Nie masz uprawnień (Nie jesteś graczem) <br/>
+                <br/>
+            1x Błędy z przesłaną komendą <br/>
+                10 Niepoprawny typ komendy <br/>
+                11 Zbyt mało argumentów <br/>
+                12 Gra jest zapauzowana <br/>
+            <br/>
+            2x Błąd zwrócony z planszy (+Tworzenie planszy) <br/>
+                20 Błąd przy tworzeniu planszy   // Opis błędu jest 2. argumentem <br/>
+                21 Niepoprawna ilość graczy <br/>
+                22 Nie udało się położyć pionka  // Prawie na pewno złe koordynaty lub zajęte pole, z racji na istnienie Error 23 <br/>
+                23 Nie twoja tura <br/>
+            <br/>
+            3x Błąd przy dołączaniu do gry <br/>
+                30 Gra jest pełna <br/>
+                31 Nie podano nicku lub błędny nick <br/>
+                32 Podano błędny port <br/>
+                33 Nick jest zajęty <br/>
+                34 Już dołączyłeś <br/>
+            <br/>
+            4x Błąd przy tworzeniu gry <br/>
+                40 Błąd zwrócony z gry (Opis błędu jest 2. argumentem) <br/>
+                41 Serwer pełny <br/>
+                42 Błąd przy przydzielaniu portu <br/>
+                43 Niepoprawna ilość graczy <br/>
+                44 Niepoprawne rozmiary planszy <br/>
+                45 Niepoprawny cel <br/>
+            <br/>
+            8x Inne błędy <br/>
+                80 Nie znaleziono starego nicku (SetNick u admina) <br/>
+                81 Nie poprawne ID (SetTurn) <br/>
+            <br/>
+            9x Błędy administratorskie <br/>
+                90 Nie istnieje taki gracz <br/>
+                91 Błąd przy czyszczeniu pola <br/>
+                92 Błąd przy czyszczeniu gracza <br/>
+                93 Nie znaleziono gracza (Kick) <br/>
+    </main>
+    <footer>
+        Adam Stachowicz 2024
+    </footer>
+
+    <div id="howToWrapper" class="modalWrapper"> <iframe src="../modals/modalHowTo.html" title="howToPlay"></iframe> </div>
+    <div id="controlWrapper" class="modalWrapper"> <iframe src="../modals/modalControl.html" title="control"></iframe> </div>
+</body>
+</html>
+
+<script>
+    document.getElementById("howToButton").onclick = function(){ document.getElementById("howToWrapper").style.display = "block"; };
+    document.getElementById("controlButton").onclick = function(){ document.getElementById("controlWrapper").style.display = "block"; };
+    document.getElementById("resultsButton").onclick = function(){ document.location.href = "../results"; }
+
+    window.addEventListener("message", function(event) {
+        if(event.data === "closeModal"){
+            document.getElementById("howToWrapper").style.display = "none"; 
+            document.getElementById("controlWrapper").style.display = "none"; 
+        }
+    });
+</script>

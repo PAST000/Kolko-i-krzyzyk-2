@@ -14,15 +14,18 @@ export default class Board{
     #fields = [];
     #vertices = [];
     #pawns = [];
+    #separator = ',';
+    #playerIDs = [];
+    #pawnTypes = [];  
 
     constructor(cnv, cnvWidth, cnvHeight, X, Y, Z, size, prec, sens,
                 fillClr = new Color(0, 0, 120, 0.2), lineClr = new Color(0, 0, 180, 0.2), lineWdt = 0.1, pawnClr = new Color(40, 40, 40, 0.35)){
         this.length = parseFloat(size * X);  //
-        this.height = parseFloat(size * Y);  // Wymiary planszy
+        this.height = parseFloat(size * Y);  // Rozmiary planszy
         this.width = parseFloat(size * Z);   //
         this.singleSize = parseFloat(size);
         this.precision = parseInt(prec);
-        this.sensitivity = parseFloat(sens);
+        this.armFactor = 0.11;
 
         this.canvas = cnv;
         this.canvasRect = this.canvas.getBoundingClientRect();
@@ -40,8 +43,10 @@ export default class Board{
         
         this.#pawns = Array.from({ length: this.X*this.Y*this.Z });
         this.layers = Array.from({ length: this.Z }, () => []);
-        this.chosenLayer = -1; // -1 oznacza brak wybranej warstwy
-        this.chosenField = -1; // -1 oznacza brak wybranego pola
+        this.chosenLayer = -1;  // -1 oznacza brak wybranej warstwy
+        this.chosenField = -1;  // -1 oznacza brak wybranego pola
+        this.#playerIDs = ['O', 'X', 'C'];
+        this.#pawnTypes = {'O': "Sphere", 'X': "Cross", 'C': "Cone"};
 
         this.#generateVertices();
         this.#generateFields();
@@ -96,7 +101,7 @@ export default class Board{
             this.draw();
         });
         
-        this.engine = new Engine(cnv, cnvWidth, cnvHeight, [...this.#fields], this.center, this.sensitivity);
+        this.engine = new Engine(cnv, cnvWidth, cnvHeight, [...this.#fields], this.center, parseFloat(sens));
     }
 
     #generateVertices(){
@@ -123,42 +128,47 @@ export default class Board{
     }
 
     addPawn(type, pos){
-        if(!pos instanceof Array) return;
-        if(pos.length < 3) return;
+        let id = pos;
+
+        if(pos instanceof Array){
+            if(pos.length < 3) return false;
+            id = this.arrToId(pos);
+        }
+        else if(!pos instanceof Number) return false;
+        else pos = this.idToArr(pos);
+
         type = type.toLowerCase();
-        let center = new Vertex(-this.singleSize*((this.X - 1)/2 - pos[0]),
-                                -this.singleSize*((this.Y - 1)/2 - pos[1]), 
-                                this.singleSize*((this.Z - 1)/2 - pos[2]));
-        let id = this.arrToId(pos);
+        //let center = this.#fields[id].center;
+        let v1 = this.#fields[id].vertices[0];
+        let v2 = this.#fields[id].vertices[6];
+        let center = new Vertex((v1.x + v2.x)/2, (v1.y + v2.y)/2, (v1.z + v2.z)/2);  // Średnia dwóch wierzchołków leżacych na tej samej przekątnej
 
         switch(type){
             case "cube":
                 this.#pawns[id] = new Cube(center, this.singleSize * 0.75, this.pawnColor);
-                this.engine.addObject(this.#pawns[id]);
                 break;
 
             case "cuboid":
                 this.#pawns[id] = new Cuboid(center, this.singleSize * 0.75, this.singleSize * 0.65, this.singleSize * 0.6, this.pawnColor);
-                this.engine.addObject(this.#pawns[id]);
                 break;
 
             case "cross":
-                this.#pawns[id] = new Cross(center, this.singleSize * 0.85, this.pawnColor)
-                this.engine.addObject(this.#pawns[id]);
+                this.#pawns[id] = new Cross(center, this.singleSize * 0.85, this.armFactor, this.pawnColor);
                 break;
 
             case "sphere":
             case "pseudosphere":
                 this.#pawns[id] = new PseudoSphere(center, this.singleSize * 0.45, this.precision, this.pawnColor);
-                this.engine.addObject(this.#pawns[id]);
                 break;
 
             case "cone":
                 this.#pawns[id] = new Cone(center, this.singleSize * 0.45, this.singleSize * 0.8, this.precision, this.pawnColor);
-                this.engine.addObject(this.#pawns[id]);
                 break;
-            default: break;
+            default: 
+                return false;    
         }
+        this.engine.addObject(this.#pawns[id]);
+        return true;
     }
 
     idToArr(id){
@@ -289,17 +299,43 @@ export default class Board{
                                                   this.#pawns[i].fillColor, this.#pawns[i].lineClr, this.#pawns[i].lineWidth);
     }
 
-    draw(){ this.engine.draw(); }
-
     setFieldsStyle(fillClr, lineClr, width){
         width = parseFloat(width);
         if(!(fillClr instanceof Color) || !(lineClr instanceof Color) || typeof(width) !== "number") return false;
+
         for(let i = 0; i < this.#fields.length; i++){
-            this.#fields[i].changeFillColor(fillClr);
-            this.#fields[i].changeLineColor(lineClr);
+            if(this.idToArr(i)[2] === this.chosenLayer){
+                this.#fields[i].fillColor.setOpacity(fillClr.a);
+                this.#fields[i].lineColor.setOpacity(lineClr.a);
+            }
+            else{
+                this.#fields[i].changeFillColor(fillClr);
+                this.#fields[i].changeLineColor(lineClr);
+            }
             this.#fields[i].changeLineWidth(width);
         }
         this.engine.setStyle(fillClr, lineClr, width);
         this.draw();
     }
+
+    updatePawns(txt){
+        let board = txt.split(this.#separator);
+        if(board.length < this.#pawns.length) return false;
+
+        for(let i = 0; i < board.length; i++){
+            if(this.#playerIDs.includes(board[i])){
+                if(this.#pawns[i] === null)  // TODO: nie tylko null, zły typ także - czyszczenie
+                    this.addPawn(this.#pawnTypes[board[i]], i);
+            }
+            else
+                if(this.#pawns[i] !== null)
+                    this.#pawns[i] = null;
+        }
+        this.draw();
+        return true;
+    }
+
+    draw(){ this.engine.draw(); }
+    setSensitivity(sens){ this.engine.setSensitivity(sens); }
+    getSizes(){ return [this.X, this.Y, this.Z]; }
 };

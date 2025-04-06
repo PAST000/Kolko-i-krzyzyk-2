@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="description" content="Kółko i krzyżyk 2">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Access-Control-Allow-Origin" content="modalLocal.html">
+
+    </meat>
+    <link rel="icon" type="image/x-icon" href="../resources/icon.ico">
+    <title>Kółko i krzyżyk 2</title>
+    <link rel="stylesheet" href="style.css">
+
+</head>
+<body>
+    <header>
+        <img src="../resources/icon.png" alt="Nie udało się załadować ikony">
+        <h1>Kółko i krzyżyk 2</h1>
+        <nav>
+            <button id="howToButton">Jak grać</button> 
+            <div class="line"></div>
+            <button id="controlButton">Sterowanie</button> 
+            <div class="line"></div>
+            <a href="../communication">Komunikacja</a> 
+        </nav>
+    </header>
+    <main>
+        
+    </main>
+    <footer>
+        Adam Stachowicz 2024
+    </footer>
+
+    <div id="howToWrapper" class="modalWrapper"> <iframe src="../modals/modalHowTo.html" title="howToPlay"></iframe> </div>
+    <div id="controlWrapper" class="modalWrapper"> <iframe src="../modals/modalControl.html" title="control"></iframe> </div>
+</body>
+</html>
+
+<script>
+    document.getElementById("howToButton").onclick = function(){ document.getElementById("howToWrapper").style.display = "block"; };
+    document.getElementById("controlButton").onclick = function(){ document.getElementById("controlWrapper").style.display = "block"; };
+
+    window.addEventListener("message", function(event) {
+        if(event.data === "closeModal"){
+            document.getElementById("howToWrapper").style.display = "none"; 
+            document.getElementById("controlWrapper").style.display = "none"; 
+        }
+    });
+</script>

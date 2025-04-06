@@ -30,6 +30,12 @@
         padding-left: 5px;
     }
 
+    #closeWrapper{
+        overflow: auto;
+        clear: both;
+        margin-bottom: 15px;
+    }
+
     #close{
         float: right;
         background-color: transparent;
@@ -45,16 +51,15 @@
     }
 
     #start{
-        margin-left: 35%;
         background-color: transparent;
         border: 2px solid black;
         box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
         border-radius: 3px;
+        margin-left: 37%;
         margin-top: 15px;
         padding: 6px;
         font-weight: bold;
-        width: 30%;
-        min-width: 70px;
+        width: auto;
         text-align: center;
         font-size: 16px;
     }
@@ -110,8 +115,15 @@
 </head>
 
 <section id="modalWrapper">
-    <button id="close">&times</button><br>
+    <div id="closeWrapper">
+        <button id="close">&times</button>
+    </div>
     <p id="error">Wprowadź poprawne dane</p>
+
+    <div class="wrapper">
+        <label for="nickInput">Nick: </label>
+        <input type="text" id="nickInput" name="nickInput" placeholder="Zostaw puste, jeśli nie chcesz dołącząć.">
+    </div>
 
     <section class="container" id="dimsContainer">
         <div class="wrapper">
@@ -190,22 +202,24 @@
 
     document.getElementById("start").onclick = function() {
         let dimsArr = [];
-        const target = document.getElementById("target").value;
+        const name = document.getElementById("nickInput").value;
+        const trgt = document.getElementById("target").value;
         
         for(let i = 1; i <= dims; i++){
             if(document.getElementById("dim" + i).value < 2){
                 document.getElementById("error").style.display = "block";
                 return;
             }
-            dimsArr[i] = document.getElementById("dim" + i).value;
+            dimsArr[i - 1] = document.getElementById("dim" + i).value;
         }
 
-        if( dimsArr.length < 2 || numOfPlayers < 2){
+        if( dimsArr.length < 2 || numOfPlayers < 2 || trgt < 0){
             document.getElementById("error").style.display = "block";
             return;
         }
 
-        sessionStorage.setItem("hostData", JSON.stringify({ dimsArr, numOfPlayers, target }));
+        sessionStorage.clear();
+        sessionStorage.setItem("hostData", JSON.stringify({ nick: name, nOfPlayers : numOfPlayers, sizes : dimsArr, target : trgt }));
         window.parent.postMessage("closeModal", "*"); 
         window.parent.location.href = "../game";
     };
