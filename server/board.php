@@ -9,6 +9,7 @@ class Board{
     private $target = 3;    // Zwycięzka ilość w jednej linii
     private $dirs = [];
     public const PAWNS = ['O', 'X', 'P']; // Kula, krzyżyk, piramida
+    public const SIZES_SEPARATOR = ',';
 
     function initDirs(){
         $dir = new Direction($this->dims);
@@ -31,8 +32,7 @@ class Board{
         
         for($i = 0; $i < $this->dims; $i++)
             $this->sizesMult *= $this->sizes[$i];
-        for ($i = 0; $i < $this->sizesMult; $i++) 
-            $this->board[$i] = null;
+        $this->board = array_fill(0, $this->sizesMult, null);
         $this->initDirs();
     }
 
@@ -42,7 +42,7 @@ class Board{
         $id = $this->arrToId($v);
         if($id === false) return false; 
         if($id < 0 || $id >= count($this->board)) return false;
-        if($pawn < 0 || $pawn > count(self::PAWNS)) return false;
+        if($pawn < 0 || $pawn >= count(self::PAWNS)) return false;
         if($this->board[$id] !== null) return false;
 
         $this->board[$id] = self::PAWNS[$pawn];
@@ -66,14 +66,19 @@ class Board{
     }
 
     function checkWin(){  //Zwraca id pola i id kierunku
+        if(empty($this->board)) return false;
+        $dirsCount = count($this->dirs);
+
         for($i = 0; $i < count($this->board); $i++){
             if($this->board[$i] === null) continue;
 
-            for($j = 0; $j < count($this->dirs); $j++){
+            for($j = 0; $j < $dirsCount; $j++){
                 if(!$this->isInRange($i, $j)) continue;
 
-                for($k = 0; $k < $this->target; $k++){
-                    if($this->board[$i] !== $this->board[$this->arrToId($this->translate($i, $this->dirs[$j], $k))]) break;
+                for($k = 1; $k < $this->target; $k++){
+                    $translated = $this->arrToId($this->translate($i, $this->dirs[$j], $k));
+                    if($translated === false) break;
+                    if($this->board[$i] !== $this->board[$translated]) break;
                     if($k === $this->target - 1) return [$i, $j];  //Jeśli sprawdziliśmy już wystarczającą do wygranej ilość pól
                 }
             }
@@ -81,12 +86,16 @@ class Board{
         return null;
     }
 
+    function checkTie(){ 
+        return $this->countEmpty() > 0 ? false : true;
+    }
+
     function isInRange($id, $n){ //n - indeks kierunków
         if($id < 0 || $id >= count($this->board)) return false;
         $v = $this->idToArr($id);
 
         for($i = 0; $i < $this->dims; $i++){
-            $v[$i] += $this->target*($this->dirs[$n]->getDirection()[$i]);
+            $v[$i] += ($this->target - 1)*($this->dirs[$n]->getDirection()[$i]);
             if($v[$i] < 0 || $v[$i] >= $this->sizes[$i])
                 return false;
         }
@@ -138,13 +147,14 @@ class Board{
         for($i = 0; $i < count($this->board); $i++)
             if($this->board[$i] === null) 
                 $count++;
-        return $count();
+        return $count;
     }
 
     function getTarget(){ return $this->target; }
     function getDims(){ return $this->dims; }
     function getDirections(){ return $this->dirs; }
     function getSizes(){ return $this->sizes; }
+    function serializeSizes(){ return implode(self::SIZES_SEPARATOR, $this->sizes); }
     function implode($separator = ','){ return implode($separator, $this->board); }
 }
 ?>

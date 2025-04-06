@@ -8,11 +8,13 @@ use React\EventLoop\Factory;
 
 require "vendor/autoload.php";
 require "board.php";
+//require "neuralNet/neuralNet.php";
 
 class GameServer implements MessageComponentInterface {
     protected $clients;
     protected $players = [];     // nick => socket, jeśli [nick] === null to nie ma takiego gracza
     protected $playersIDs = [];  // nick => id
+    protected $bots = [];        // id => [nick, sieć]
 
     protected $freeIDs = [0,1,2];
     protected $board;
@@ -52,12 +54,16 @@ class GameServer implements MessageComponentInterface {
     }
 
     public function __destruct(){
+        $this->shutdown();
+    }  
+
+    public function shutdown(){
         foreach($this->clients as $client){
             $client->send("Closed");
             $this->clients->detach($client);
         }
-        die();
-    }  
+        $this->loop->stop();
+    }
 
     public function onOpen(ConnectionInterface $socket) {
         $this->clients->attach($socket);
@@ -95,7 +101,7 @@ class GameServer implements MessageComponentInterface {
     public function onError(ConnectionInterface $socket, \Exception $e) { $socket->close(); }  // TODO
 
     public function onMessage(ConnectionInterface $socket, $msg) {
-        //file_put_contents("logsKiK2/game2Messages.txt", $msg, FILE_APPEND);     // FILE LOG
+        //file_put_contents("logsKiK2/gameMessages.txt", $msg, FILE_APPEND);     // FILE LOG
         
         $args = explode(self::MSG_DELIMETER, $msg);
         if(empty($args[0])){ return; }
@@ -118,34 +124,7 @@ class GameServer implements MessageComponentInterface {
 
         switch(strtolower($args[0])){
             case "create":
-                if(empty($args[1]) || empty($args[2]) || empty($args[3])){
-                    $socket->send("Error 11");
-                    return false;
-                }
-                if($args[1] < 2 || $args[1] > self::MAX_NUM_OF_PLAYERS){
-                    $socket->send("Error 43");
-                    return false;
-                }
-                if(empty(explode(self::SIZES_DELIMETER, $args[2]))){
-                    $socket->send("Error 44");
-                    return false;
-                }
-                if($args[3] < 0){
-                    $socket->send("Error 45");
-                    return false;
-                }
-
-                $this->numOfPlayers = (int)$args[1];
-                $this->board = new Board(explode(self::SIZES_DELIMETER, $args[2]), $args[3]);
-                if($this->numOfPlayers > count($this->players)){  
-                    foreach($this->playersIDs as $nick => $id)
-                        if($id >= $this->numOfPlayers){
-                            $this->players[$nick]->send("Kicked");
-                            $this->clients->detach($this->players[$toKick]);
-                            unset($this->players[$nick]);
-                            unset($this->playersIDs[$nick]);
-                        }
-                }
+                $this->resetGame((int)$args[1], $args[2], (int)$args[3], $socket);
                 break;
 
             case "drop":
@@ -195,7 +174,7 @@ class GameServer implements MessageComponentInterface {
                 break;
 
             case "put":
-                $this->put($socket, $args);
+                return $this->put($socket, $args);
                 break;
 
             case "setturn":
@@ -240,7 +219,11 @@ class GameServer implements MessageComponentInterface {
         
 
             case "join": 
-                if(!$this->join($socket, $args)) return false;
+                return $this->join($socket, $args);
+                break; 
+
+            case "addbot": 
+                return $this->addBot($socket, $args);
                 break; 
 
             case "pause": 
@@ -290,7 +273,7 @@ class GameServer implements MessageComponentInterface {
                 }
 
                 $oldNick = "";
-                foreach($players as $nick => $sockID)
+                foreach($this->players as $nick => $sockID)
                     if($sockID[0] == $socket){
                         $oldNick = $nick;
                         break;
@@ -347,7 +330,7 @@ class GameServer implements MessageComponentInterface {
         $this->playersIDs[$args[1]] = array_shift($this->freeIDs);
         $socket->send("Joined");
 
-        if(count($this->players) === $this->numOfPlayers){
+        if((count($this->players) + count($this->bots)) === $this->numOfPlayers){
             foreach($this->clients as $client) $client->send("Started");
             $this->started = true;
         }
@@ -377,6 +360,26 @@ class GameServer implements MessageComponentInterface {
         $this->turn++;
         $this->turn %= count($this->players);
         $this->checkWin();
+        $this->checkTie();
+        return true;
+    }
+
+    private function addBot($socket, $args){
+        /*if(count($this->freeIDs) < 1){
+            $socket->send("Error 30");
+            return false;
+        }
+        if(empty($args[1])){
+            $socket->send("Error 31");
+            return false;
+        }
+        if($this->players[$args[1]] !== null){
+            $socket->send("Error 33");
+            return false;
+        }
+
+        $this->bots[array_shift($this->freeIDs)] = [$args[1], null];  // TODO: kick bota*/
+
         return true;
     }
 
@@ -395,18 +398,74 @@ class GameServer implements MessageComponentInterface {
         if($result === null || empty($result) || count($result) < 2) return false;
 
         $playerID = $this->board->getPlayerByField($result[0]);
-        $nick = array_search($playerID, $this->players);
-        if(empty($playerID) || empty($nick)) return false;
+        $nick = (string)array_search($playerID, $this->playersIDs);
 
-        foreach($clients as $client)
+        if($playerID === false || $nick === false) return false;
+
+        foreach ($this->clients as $client) 
             $client->send("Won " . $playerID . ' ' . $nick . ' ' . $result[0] . ' ' . $result[1]);
+        $this->pause();
+        $this->started = false;
+
+        $this->loop->addTimer(6, function () {
+            if(!$this->started){
+                $this->resetGame($this->numOfPlayers, $this->board->serializeSizes(), $this->board->getTarget());
+                $this->unpause();
+            }
+        });
         return true;
     }
 
     public function checkTie(){
-        if($this->board->checkTie())
-            foreach($clients as $client)
+        if($this->board->checkTie()){
+            foreach($this->clients as $client)
                 $client->send("Tie");
+            $this->pause();
+            $this->started = false;
+        }
+
+        $this->loop->addTimer(6, function () {
+            if(!$this->started){
+                $this->resetGame($this->numOfPlayers, $this->board->serializeSizes(), $this->board->getTarget());
+                $this->unpause();
+            }
+        });
+    }
+
+    public function resetGame($numOfPl, $sizes, $target, $socket = null){
+        if(empty($numOfPl) || empty($sizes) || empty($target) || $target < 0){
+            if($socket !== null) $socket->send("Error 11");
+            return false;
+        }
+        if($numOfPl < 2 || $numOfPl > self::MAX_NUM_OF_PLAYERS){
+            if($socket !== null) $socket->send("Error 43");
+            return false;
+        }
+        if(empty(explode(self::SIZES_DELIMETER, $sizes))){
+            if($socket !== null) $socket->send("Error 44");
+            return false;
+        }
+        if($target < 0){
+            if($socket !== null) $socket->send("Error 45");
+            return false;
+        }
+
+        $this->numOfPlayers = (int)$numOfPl;
+        $this->board = new Board(explode(self::SIZES_DELIMETER, $sizes), $target);
+        $this->freeIDs = [];
+        for($i = 0; $i < $this->numOfPlayers; $i++) array_push($this->freeIDs, $i);
+        $this->started = false;
+
+        if($this->numOfPlayers > count($this->players)){  
+            foreach($this->playersIDs as $nick => $id)
+                if($id >= $this->numOfPlayers){
+                    $this->players[$nick]->send("Kicked");
+                    $this->clients->detach($this->players[$toKick]);
+                    unset($this->players[$nick]);
+                    unset($this->playersIDs[$nick]);
+                }
+            $this->started = true;
+        }
     }
 
     public function getIDBySocket($socket){

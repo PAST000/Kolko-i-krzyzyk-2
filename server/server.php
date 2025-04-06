@@ -58,8 +58,10 @@ class Server implements MessageComponentInterface {
     }
 
     private function createGame($socket, $args){
-        if(empty($args) || count($args) < 4) return false;
-
+        if(empty($args) || count($args) < 4){
+            $socket->send("Error 11");
+            return false;
+        }
         if($this->gamePort > 65535 && empty($this->freePorts)){
             $socket->send("Error 41" . $port);
             return false;
@@ -68,6 +70,16 @@ class Server implements MessageComponentInterface {
         $prt = $this->gamePort;
         if(!empty($this->freePorts)) $prt = array_shift($this->freePorts);
         else $this->gamePort++;
+
+       /* while(!$this->checkPort($prt)){
+            if($prt > 65535){
+                $socket->send("Error 42");
+                return;
+            }
+
+            array_push($this->freePorts, $prt);  // Zwracamy port, być może później się zwolni
+            $prt = $this->gamePort++;
+        }*/
 
         $process = new Process([PHP_BINARY, __DIR__ . "/game.php", $this->port , $prt, $args[1], (string)$args[2], $args[3]]);
         $process->start();
@@ -84,6 +96,15 @@ class Server implements MessageComponentInterface {
 
         $socket->send("Port " . $prt);
         echo "Uruchomiono instancję gry na porcie: $prt\n";
+    }
+
+    private function checkPort($port, $host = '127.0.0.1') {
+        $connection = @fsockopen($host, $port, $errno, $errstr, 0.2);
+        if (is_resource($connection)) {
+            fclose($connection);
+            return false;
+        }
+        return true;
     }
 }
 
