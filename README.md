@@ -26,7 +26,7 @@ This is a WebSocket-based game server built with **Ratchet** in PHP. It supports
 ## 📦 Installation
 
 1. Clone the repository
-2. Install dependencies using Composer (run composer install in server directory)
+2. Install dependencies using Composer (run `composer install` in server directory)
 
 ---
 
