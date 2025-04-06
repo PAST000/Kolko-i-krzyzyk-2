@@ -42,8 +42,12 @@ export default class Engine{
         this.isRotating = false;
         this.rotationLoop = null;
         this.rotateLoop = () => {
-            if (!this.isRotating) return; 
-            
+            //if (!this.isRotating) return; 
+            if (!this.isRotating) {
+                this.isRotating = true;
+                requestAnimationFrame(this.rotateLoop);
+            }
+
             let rotX = 0, rotY = 0, rotZ = 0;
         
             if(!this.#keys["ShiftRight"] && !this.#keys["ShiftLeft"]){
@@ -131,7 +135,6 @@ export default class Engine{
     }
 
     addObject(obj){
-        this.rotateObj(obj, this.rotationX, this.rotationY, this.rotationZ);
         this.#objects.push(obj);
         this.updateVertices();
         return this.#objects.length - 1;
@@ -139,19 +142,21 @@ export default class Engine{
 
 
     rotateAll(rotX, rotY, rotZ = 0){
-        this.rotationX = (this.rotationX + rotX) % (2*Math.PI);
-        this.rotationY = (this.rotationY + rotY) % (2*Math.PI);
-        this.rotationZ = (this.rotationZ + rotZ) % (2*Math.PI);
+        this.rotationX += rotX;
+        this.rotationY += rotY;
+        this.rotationZ += rotZ;
 
         for(let i = 0; i < this.vertices.length; i++)
             this.rotateVert(this.vertices[i], rotX, rotY, rotZ);
     }
 
     rotateObj(obj, rotX, rotY, rotZ = 0){
+        console.log("rotObj1");
         if(typeof obj === "number"){
-            if(obj < 0 || obj >= this.#objects.length)
+            if(obj < 0 || obj >= this.#objects.length) return false;
             obj = this.#objects[obj];
         }
+        console.log("rotObj2");
 
         for(let i = 0; i < obj.vertices.length; i++)
             this.rotateVert(obj.vertices[i], rotX, rotY, rotZ);
@@ -202,7 +207,7 @@ export default class Engine{
     setStyle(fillColor = this.defaultFillColor, lineColor = this.defaultLineColor, lineWidth = this.defaultLineWidth){
         if(fillColor instanceof Color) this.#ctx.fillStyle = fillColor.toString();
         if(lineColor instanceof Color) this.#ctx.strokeStyle = lineColor.toString();
-        if(typeof lineWidth === "number" && lineWidth !== NaN) this.#ctx.lineWidth = lineWidth;
+        if(typeof lineWidth === "number" && !isNaN(lineWidth)) this.#ctx.lineWidth = lineWidth;
     }
 
     updateCenter(){

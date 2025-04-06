@@ -23,8 +23,16 @@ function refreshInfo(players, target, turn, yourID, admin){
         const txt = document.createTextNode("[" + i + "] " + keys.find(key => players[key] === i));
 
         wrapper.classList.add("playerWrapper");
+
         par.appendChild(txt);
         wrapper.appendChild(par);
+
+        if(admin){
+            const button = document.createElement("button");
+            button.classList.add("kickButton");
+            wrapper.appendChild(button);
+        }
+
         childrenArray.push(wrapper);
     }
     document.getElementById("playersContainer").replaceChildren(...childrenArray);
@@ -36,9 +44,18 @@ window.addEventListener("message", function(event) {
         document.getElementById("controlWrapper").style.display = "none"; 
         document.getElementById("winWrapper").style.display = "none";   
     }
+    else if(event.data === "closeInfo"){
+        document.getElementById("infoWrapper").style.display = "none";  
+        window.location.href = "../";
+    }
 });
 
 window.onload = function() {
     changeFillColor();
     changeLineColor();
+    
+    document.getElementById("howToWrapper").style.display = "none"; 
+    document.getElementById("controlWrapper").style.display = "none"; 
+    document.getElementById("winWrapper").style.display = "none";   
+    document.getElementById("infoWrapper").style.display = "none"; 
 }

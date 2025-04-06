@@ -35,6 +35,8 @@ main{
     flex-grow: 1;
     text-align: center;
     background-color: deepskyblue;
+    overflow-y: scroll;
+    padding: 10px 0;
 }
 
 article{
@@ -67,17 +69,16 @@ nav{
     margin-top: 25px;
 }
 
-nav > button, nav > a{
+nav > button{
     border: 0;
     padding: 10px 5px;
     background-color: transparent;
     font-weight: bold;
     font-size: 16px;
     color: white;
-    text-decoration: none;
 }
 
-nav > button:hover, nav > a:hover{
+nav > button:hover{
     background-color: rgb(120, 120, 120);
 }
 

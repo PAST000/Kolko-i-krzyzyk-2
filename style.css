@@ -67,16 +67,17 @@ nav{
     margin-top: 25px;
 }
 
-nav > button{
+nav > button, nav > a{
     border: 0;
     padding: 10px 5px;
     background-color: transparent;
     font-weight: bold;
     font-size: 16px;
     color: white;
+    text-decoration: none;
 }
 
-nav > button:hover{
+nav > button:hover, nav > a:hover{
     background-color: rgb(120, 120, 120);
 }
 

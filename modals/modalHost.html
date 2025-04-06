@@ -51,16 +51,15 @@
     }
 
     #start{
-        margin-left: 35%;
         background-color: transparent;
         border: 2px solid black;
         box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
         border-radius: 3px;
+        margin-left: 37%;
         margin-top: 15px;
         padding: 6px;
         font-weight: bold;
-        width: 30%;
-        min-width: 70px;
+        width: auto;
         text-align: center;
         font-size: 16px;
     }
@@ -219,6 +218,7 @@
             return;
         }
 
+        sessionStorage.clear();
         sessionStorage.setItem("hostData", JSON.stringify({ nick: name, nOfPlayers : numOfPlayers, sizes : dimsArr, target : trgt }));
         window.parent.postMessage("closeModal", "*"); 
         window.parent.location.href = "../game";

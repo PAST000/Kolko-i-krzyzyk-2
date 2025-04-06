@@ -20,6 +20,8 @@
             <div class="line"></div>
             <button id="controlButton">Sterowanie</button> 
             <div class="line"></div>
+            <a href="../communication/index.html">Komunikacja</a>
+            <div class="line"></div>
             <button id="resultsButton">Wyniki</button> 
         </nav>
     </header>
@@ -35,8 +37,11 @@
             <p id="yourID">Twoje ID: </p>
             <p id="target">Cel: </p>
 
-            <button id="ping">Send</button>
-            <input type="text" id="cmd">
+            <div id="consoleWrapper">
+                <button id="send">Wyślij</button>
+                <input type="text" id="cmd">
+                <p id="error"></p>
+            </div>
         </section>
         <canvas id="canvas"></canvas>
         <aside>
@@ -73,7 +78,8 @@
    
     <div id="howToWrapper" class="modalWrapper"> <iframe src="../modals/modalHowTo.html" title="howToPlay"></iframe> </div>
     <div id="controlWrapper" class="modalWrapper"> <iframe src="../modals/modalControl.html" title="control"></iframe> </div>
-    <div id="winWrapper" class="modalWrapper"> <iframe src="../modals/modalWin.html" title="win"></iframe> </div>
+    <div id="winWrapper" class="modalWrapper"> <iframe src="../modals/modalWin.html" title="win" id="winIframe"></iframe> </div>
+    <div id="infoWrapper" class="modalWrapper"> <iframe src="../modals/modalInfo.html" title="info" id="infoIframe"></iframe> </div>
 </body>
 </html>
 
@@ -98,13 +104,13 @@
     document.getElementById("howToButton").onclick = function(){ document.getElementById("howToWrapper").style.display = "block"; };
     document.getElementById("controlButton").onclick = function(){ document.getElementById("controlWrapper").style.display = "block"; };
     document.getElementById("resultsButton").onclick = function(){ document.location.href = "../results"; }
+    document.getElementById("error").ondblclick = function(){ document.getElementById("error").innerHTML = ""; }
 
     let formData = JSON.parse(sessionStorage.getItem("hostData"));
     if(formData === null){
         formData = JSON.parse(sessionStorage.getItem("joinData"));
         action = "join";
     }
-    console.log(formData);
 
     window.addEventListener("resize", () => board.resize());
     document.getElementById("apply").onclick = function(){
@@ -118,7 +124,7 @@
         );
         board.setSensitivity(parseFloat(document.getElementById("sensitivity").value));
     }
-    document.getElementById("ping").onclick = function(){ sendMessage(document.getElementById("cmd").value); }
+    document.getElementById("send").onclick = function(){ sendMessage(document.getElementById("cmd").value); }
     document.getElementById("canvas").addEventListener("dblclick", () =>{ 
         let id = board.chosenField;
         if(id < 0) return false;
@@ -131,9 +137,6 @@
     document.getElementById("port").innerHTML = "Port: " + port;
     console.log("stan: ", socket.readyState);
 
-    sessionStorage.setItem("winData", JSON.stringify({ id : 1, nick : "Adam" }));
-    document.getElementById("winWrapper").style.display = "block";
-
     socket.onopen = function() { 
         console.log('Połączono'); 
         if(action === "host"){
@@ -142,7 +145,6 @@
         }
         if(action === "join") socket.send("Join " + formData.nick);
     };
-
     socket.onmessage = (event) => { onMessage(event.data); };
     socket.onclose = function() { onClose(); };
     
@@ -201,28 +203,50 @@
                     console.log("Błędna komenda Won: ", args);
                     return;
                 }
-                sessionStorage.setItem("winData", JSON.stringify({ id : args[1], nick : args[2] }));
+                sessionStorage.removeItem("winData");
+                sessionStorage.setItem("winData", JSON.stringify({ id : args[1], 
+                                                                   nick : args[2], 
+                                                                   field : (args[3] === undefined) ? null : args[3], 
+                                                                   direction : (args[4] === undefined) ? null : args[4] }));
+                console.log({ id : args[1], 
+                              nick : args[2], 
+                              field : (args[3] === undefined) ? null : args[3], 
+                              direction : (args[4] === undefined) ? null : args[4] });
                 document.getElementById("winWrapper").style.display = "block"; 
+                document.getElementById("winIframe").contentWindow.postMessage("showWin", "*");
                 break;
-
             case "joined": break;
-            case "left": break;
-            case "closed": break;
-            case "kicked": break;
-            case "started": document.getElementById("paused").style.display = "none"; break;
-            case "paused": document.getElementById("paused").style.display = "block"; break;
-            case "unpaused": document.getElementById("paused").style.display = "none"; break;
-            case "error": break;
-            case "ping": socket.send("Reping"); break;
-            case "reping": console.log("Reping"); break;
-            case "youareadmin": break; // TODO
+            case "closed": 
+                showInfo("Serwer został zamknięty.");
+                break;
+            case "kicked": 
+                showInfo("Zostałeś wyrzucony.");
+                break;
+            case "started": 
+                document.getElementById("paused").style.display = "none"; 
+                break;
+            case "paused": 
+                document.getElementById("paused").style.display = "block"; 
+                break;
+            case "unpaused": 
+                document.getElementById("paused").style.display = "none"; 
+                break;
+            case "error": 
+                document.getElementById("error").innerHTML = "Error: " + args[1]; 
+                break;
+            case "ping": 
+                socket.send("Reping"); 
+                break;
+            case "reping": 
+                console.log("Reping"); 
+                break;
+            case "youareadmin": break;
             default: console.log("Incorrect message: " + msg + " " + msg.toLowerCase()); break;
         }
     }
 
     function onClose(){
-        console.log("stan: ", socket.readyState);
-        console.log('Rozłączono'); 
+        console.log("Rozłączono.", "Stan: ", socket.readyState); 
         if (connectAgain) {
             connectAgain = false;
             socket = new WebSocket(`ws://${address}:${port}`);
@@ -234,7 +258,15 @@
             socket.onmessage = function(event) { onMessage(event.data); };
             socket.onclose = function() { onClose(); };
         }
-        console.log("stan: ", socket.readyState);
+        else
+            showInfo("Połączenie zamknięte.");
     }
 
+    function showInfo(text){
+        if(!text) text = "Błąd w pobieraniu danych.";
+        sessionStorage.removeItem("infoData");
+        sessionStorage.setItem("infoData", JSON.stringify({ txt : text }));
+        document.getElementById("infoWrapper").style.display = "block";
+        document.getElementById("infoIframe").contentWindow.postMessage("showInfo", "*");
+    }
 </script>

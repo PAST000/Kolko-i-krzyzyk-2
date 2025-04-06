@@ -25,6 +25,7 @@ export default class Board{
         this.width = parseFloat(size * Z);   //
         this.singleSize = parseFloat(size);
         this.precision = parseInt(prec);
+        this.armFactor = 0.11;
 
         this.canvas = cnv;
         this.canvasRect = this.canvas.getBoundingClientRect();
@@ -128,7 +129,6 @@ export default class Board{
 
     addPawn(type, pos){
         let id = pos;
-        console.log(type, pos);
 
         if(pos instanceof Array){
             if(pos.length < 3) return false;
@@ -138,37 +138,36 @@ export default class Board{
         else pos = this.idToArr(pos);
 
         type = type.toLowerCase();
-        let center = this.#fields[id].center;
+        //let center = this.#fields[id].center;
+        let v1 = this.#fields[id].vertices[0];
+        let v2 = this.#fields[id].vertices[6];
+        let center = new Vertex((v1.x + v2.x)/2, (v1.y + v2.y)/2, (v1.z + v2.z)/2);  // Średnia dwóch wierzchołków leżacych na tej samej przekątnej
 
         switch(type){
             case "cube":
                 this.#pawns[id] = new Cube(center, this.singleSize * 0.75, this.pawnColor);
-                this.engine.addObject(this.#pawns[id]);
                 break;
 
             case "cuboid":
                 this.#pawns[id] = new Cuboid(center, this.singleSize * 0.75, this.singleSize * 0.65, this.singleSize * 0.6, this.pawnColor);
-                this.engine.addObject(this.#pawns[id]);
                 break;
 
             case "cross":
-                this.#pawns[id] = new Cross(center, this.singleSize * 0.85, this.pawnColor)
-                this.engine.addObject(this.#pawns[id]);
+                this.#pawns[id] = new Cross(center, this.singleSize * 0.85, this.armFactor, this.pawnColor);
                 break;
 
             case "sphere":
             case "pseudosphere":
                 this.#pawns[id] = new PseudoSphere(center, this.singleSize * 0.45, this.precision, this.pawnColor);
-                this.engine.addObject(this.#pawns[id]);
-                console.log(this.#pawns[id]);
                 break;
 
             case "cone":
                 this.#pawns[id] = new Cone(center, this.singleSize * 0.45, this.singleSize * 0.8, this.precision, this.pawnColor);
-                this.engine.addObject(this.#pawns[id]);
                 break;
-            default: break;
+            default: 
+                return false;    
         }
+        this.engine.addObject(this.#pawns[id]);
         return true;
     }
 
@@ -321,17 +320,18 @@ export default class Board{
 
     updatePawns(txt){
         let board = txt.split(this.#separator);
-        console.log(board, board.length, this.#pawns.length);
         if(board.length < this.#pawns.length) return false;
 
         for(let i = 0; i < board.length; i++){
-            console.log(board[i], this.#playerIDs.includes(board[i]), this.#pawnTypes[board[i]]);
-            if(!this.#playerIDs.includes(board[i])){
-                if(this.#pawns[i] !== undefined || this.#pawns[i] !== null)
-                    this.#pawns[i] = null;
+            if(this.#playerIDs.includes(board[i])){
+                if(this.#pawns[i] === null)  // TODO: nie tylko null, zły typ także - czyszczenie
+                    this.addPawn(this.#pawnTypes[board[i]], i);
             }
-            else this.addPawn(this.#pawnTypes[board[i]], i);
+            else
+                if(this.#pawns[i] !== null)
+                    this.#pawns[i] = null;
         }
+        this.draw();
         return true;
     }
 

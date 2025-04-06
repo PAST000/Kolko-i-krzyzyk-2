@@ -62,16 +62,17 @@ nav{
     margin-top: 25px;
 }
 
-nav > button{
+nav > button, nav > a{
     border: 0;
     padding: 10px 5px;
     background-color: transparent;
     font-weight: bold;
     font-size: 16px;
     color: white;
+    text-decoration: none;
 }
 
-nav > button:hover{
+nav > button:hover, nav > a:hover{
     background-color: rgb(120, 120, 120);
 }
 
@@ -146,18 +147,57 @@ iframe{
     height: 100%;
 }
 
+#info{
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
 #paused{ 
     color: rgb(192, 0, 0);
 }
 
 #info > p{
     font-size: large;
+    margin: 8px;
+}
+
+#send{
+    border: 0px;
+    width: fit-content;
+    margin: 5px auto;
 }
 
 #playersInfo{
     margin: 0px 15px;
 }
 
+.playerWrapper{
+    position: relative;
+}
+
 .playerWrapper > p{
-    margin: 0;
+    margin: 0 auto;
+}
+
+.kickButton{
+    border: 0px;
+    background-color: transparent;
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    height: 100%;
+    content: url("../resources/kick.svg");
+}
+
+#error{
+    color: rgb(255, 40, 40);
+    font-weight: 300;
+}
+
+#consoleWrapper{
+    position: absolute;
+    bottom: 0;
+    width: auto;
+    padding: 5px;
 }

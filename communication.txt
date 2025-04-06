@@ -23,6 +23,7 @@ Do gry (admin):
     -SetTurn id 
     -SetNick nick id  // Jeśli brak 2. argumentu ustaw sobie
     -Join nick
+    -AddBot nick
     -Pause/Unpause 
     -Ping/Reping
  
@@ -47,40 +48,40 @@ ids = ['O', 'X', 'P']  // Kula, krzyżyk, piramida
 
 Typy błędów: 
     0x Błędy ogólne
-	00 Nie masz uprawnień (Nie jesteś graczem)
+	    00 Nie masz uprawnień (Nie jesteś graczem)
 
     1x Błędy z przesłaną komendą
-	10 Niepoprawny typ komendy
-	11 Zbyt mało argumentów
-	12 Gra jest zapauzowana
+	    10 Niepoprawny typ komendy
+	    11 Zbyt mało argumentów
+	    12 Gra jest zapauzowana
 
     2x Błąd zwrócony z planszy (+Tworzenie planszy)
-	20 Błąd przy tworzeniu planszy   // Opis błędu jest 2. argumentem
-	21 Niepoprawna ilość graczy
-	22 Nie udało się położyć pionka  // Prawie na pewno złe koordynaty lub zajęte pole, z racji na istnienie Error 23
-	23 Nie twoja tura
+	    20 Błąd przy tworzeniu planszy   // Opis błędu jest 2. argumentem
+	    21 Niepoprawna ilość graczy
+	    22 Nie udało się położyć pionka  // Prawie na pewno złe koordynaty lub zajęte pole, z racji na istnienie Error 23
+	    23 Nie twoja tura
 
-    3x Błąd przy dołączaniu do gry
-	30 Gra jest pełna
-	31 Nie podano nicku lub błędny nick
-	32 Podano błędny port
-	33 Nick jest zajęty  
-	34 Już dołączyłeś
+    3x Błąd przy dołączaniu do gry lub dodawaniu bota
+	    30 Gra jest pełna
+	    31 Nie podano nicku lub błędny nick
+	    32 Podano błędny port
+	    33 Nick jest zajęty  
+	    34 Już dołączyłeś
 	
     4x Błąd przy tworzeniu gry
-	40 Błąd zwrócony z gry (Opis błędu jest 2. argumentem)
-	41 Serwer pełny
-	42 Błąd przy przydzielaniu portu
-	43 Niepoprawna ilość graczy
-	44 Niepoprawne rozmiary planszy
-	45 Niepoprawny cel
+	    40 Błąd zwrócony z gry (Opis błędu jest 2. argumentem)
+	    41 Serwer pełny
+	    42 Błąd przy przydzielaniu portu
+	    43 Niepoprawna ilość graczy
+	    44 Niepoprawne rozmiary planszy
+	    45 Niepoprawny cel
 
     8x Inne błędy
-	80 Nie znaleziono starego nicku (SetNick u admina)
-	81 Nie poprawne ID (SetTurn)
+	    80 Nie znaleziono starego nicku (SetNick u admina)
+	    81 Nie poprawne ID (SetTurn)
 
     9x Błędy administratorskie
-	90 Nie istnieje taki gracz
-	91 Błąd przy czyszczeniu pola
-	92 Błąd przy czyszczeniu gracza
-	93 Nie znaleziono gracza (Kick)
+	    90 Nie istnieje taki gracz
+	    91 Błąd przy czyszczeniu pola
+	    92 Błąd przy czyszczeniu gracza
+	    93 Nie znaleziono gracza (Kick)

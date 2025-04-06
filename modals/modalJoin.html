@@ -92,6 +92,7 @@
             return;
         }
 
+        sessionStorage.clear();
         sessionStorage.setItem("joinData", JSON.stringify({ port : prt, nick : name }));
         window.parent.postMessage("closeModal", "*"); 
         window.parent.location.href = "../game";
