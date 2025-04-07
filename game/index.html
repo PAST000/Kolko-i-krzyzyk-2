@@ -14,7 +14,7 @@
 <body>
     <header>
         <img src="../resources/icon.png" alt="Nie udało się załadować ikony">
-        <h1>Kółko i krzyżyk 2</h1>
+        <h1 id="gameTitle">Kółko i krzyżyk 2</h1>
         <nav>
             <button id="howToButton">Jak grać</button> 
             <div class="line"></div>
@@ -101,10 +101,6 @@
 
     const canvas = document.getElementById("canvas");
     let board = new Board(canvas, canvas.offsetWidth, canvas.offsetHeight, 4, 4, 4, 70, 14, 3);
-    document.getElementById("howToButton").onclick = function(){ document.getElementById("howToWrapper").style.display = "block"; };
-    document.getElementById("controlButton").onclick = function(){ document.getElementById("controlWrapper").style.display = "block"; };
-    document.getElementById("resultsButton").onclick = function(){ document.location.href = "../results"; }
-    document.getElementById("error").ondblclick = function(){ document.getElementById("error").innerHTML = ""; }
 
     let formData = JSON.parse(sessionStorage.getItem("hostData"));
     if(formData === null){
