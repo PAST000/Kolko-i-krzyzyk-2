@@ -8,7 +8,7 @@ use React\EventLoop\Factory;
 
 require "vendor/autoload.php";
 require "board.php";
-//require "neuralNet/neuralNet.php";
+require "agent.php";
 
 class GameServer implements MessageComponentInterface {
     protected $clients;
