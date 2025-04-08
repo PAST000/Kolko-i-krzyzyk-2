@@ -13,17 +13,42 @@ class NeuralNet{
     private $gradientRate = 0;
     private $weightsAndBiasesCount = 0;  // Łączna liczba wag i biasów, do sprawdzania poprawności gradientu
 
+    public const MAX_RAND_WEIGHT = 10;      // Największa (również w. bezwględna z najmniejszej) wartość wagi
+    public const MAX_RAND_BIAS = 10;
     public const MAX_RATE = 100;            // Maksymalna wartość $this->gradientRate
+    public const VALUE_PRECISION = 5;       // Ilość cyfr (razem z cyfrą jedności) wartości (wag i bias'ów) 
     public const LAYERS_SEPARATOR = ' ';    //
     public const NEURONS_SEPARATOR = '/';   // JEDEN ZNAK!
     public const VALUES_SEPARATOR = ';';    //
 
-    public function __construct($layers, $neurons, $rate){
+    public function __construct($layers, $neuronsSizes, $rate){
         if(!is_numeric($layers) || $layers < 0) throw new Exception("Incorrect number of layers.");
-        if(count($neurons) < $layers) throw new Exception("Not enough neurons.");
-        $this->numOfLayers = $layers;
-        $this->inputsSize = $neurons[0];
-        $this->gradientRate = $rate;
+        if(count($neuronsSizes) < $layers) throw new Exception("Not enough neurons.");
+        if(!is_numeric($rate)) throw new Exception("Rate must be a number");
+        if($rate == 0) throw new Exception("Rate must not be 0.");
+
+        $this->numOfLayers = (int)$layers;
+        $this->inputsSize = $neuronsSizes[0];
+        $this->gradientRate = (int)$rate;
+
+        for($i = 1; $i < $this->numOfLayers; $i++){
+            array_push($this->neurons, array());
+            if(!is_numeric($neuronsSizes[$i]) || $neuronsSizes[$i] <= 0){
+                throw new Exception("All neurons sizes must be numeric and greater than 0.");
+                return;
+            }
+
+            for($j = 0; $j < $neuronsSizes[$i]; $j++){
+                try{
+                    $neuron = new Neuron(null);
+                    $neuron->randomize($neuronsSizes[$i - 1], self::MAX_RAND_WEIGHT, self::MAX_RAND_BIAS, self::VALUE_PRECISION);
+                    array_push($this->neurons[$i - 1], $neuron);
+                }
+                catch(Exception $e) {
+                    throw new Exception("Something went wrong while creating neurons.");
+                }
+            }
+        }
     }
 
     public function save($filename){
