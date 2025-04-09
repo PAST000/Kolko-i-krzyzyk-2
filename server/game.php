@@ -30,6 +30,7 @@ class GameServer implements MessageComponentInterface {
 
     protected $loop;
     protected $shutdownTimer = null;
+    protected $startTime;
 
     const MSG_DELIMETER = ' ';
     const SIZES_DELIMETER = ',';  // Ogółem przy większości implode()
@@ -48,6 +49,7 @@ class GameServer implements MessageComponentInterface {
         $this->numOfPlayers = (int)$maxPlayers;
         $this->board = new Board(explode(",", $sizes), $target);
         $this->loop = $lp;
+        $this->startTime = date("Y-m-d h:i:s");
 
         $this->freeIDs = [];
         for($i = 0; $i < $this->numOfPlayers; $i++) array_push($this->freeIDs, $i);
@@ -118,6 +120,94 @@ class GameServer implements MessageComponentInterface {
         if(!$this->stopRefresh) $this->refresh();
         else $this->stopRefresh = true;
     }
+
+    public function checkWin(){
+        $result = $this->board->checkWin();  // [idPola, idKierunku]
+        if($result === null || empty($result) || count($result) < 2) return false;
+
+        $playerID = $this->board->getPlayerByField($result[0]);
+        $nick = (string)array_search($playerID, $this->playersIDs);
+
+        if($playerID === false || $nick === false) return false;
+
+        foreach ($this->clients as $client) 
+            $client->send("Won " . $playerID . ' ' . $nick . ' ' . $result[0] . ' ' . $result[1]);
+        $this->pause();
+        $this->started = false;
+        $this->writeToDB($nick);
+
+        $this->loop->addTimer(7, function () {
+            if(!$this->started){
+                $this->resetGame($this->numOfPlayers, $this->board->serializeSizes(), $this->board->getTarget());
+                $this->unpause();
+            }
+        });
+        return true;
+    }
+
+    public function checkTie(){
+        if($this->board->checkTie()){
+            foreach($this->clients as $client)
+                $client->send("Tie");
+            $this->pause();
+            $this->started = false;
+            $this->writeToDB(null);
+
+            $this->loop->addTimer(7, function () {
+                if(!$this->started){
+                    $this->resetGame($this->numOfPlayers, $this->board->serializeSizes(), $this->board->getTarget());
+                    $this->unpause();
+                }
+            });
+        }
+    }
+
+    public function resetGame($numOfPl, $sizes, $target, $socket = null){
+        if(empty($numOfPl) || empty($sizes) || empty($target) || $target < 0){
+            if($socket !== null) $socket->send("Error 11");
+            return false;
+        }
+        if($numOfPl < 2 || $numOfPl > self::MAX_NUM_OF_PLAYERS){
+            if($socket !== null) $socket->send("Error 43");
+            return false;
+        }
+        if(empty(explode(self::SIZES_DELIMETER, $sizes))){
+            if($socket !== null) $socket->send("Error 44");
+            return false;
+        }
+        if($target < 0){
+            if($socket !== null) $socket->send("Error 45");
+            return false;
+        }
+
+        $this->numOfPlayers = (int)$numOfPl;
+        $this->board = new Board(explode(self::SIZES_DELIMETER, $sizes), $target);
+        $this->freeIDs = [];
+        for($i = 0; $i < $this->numOfPlayers; $i++) array_push($this->freeIDs, $i);
+        $this->started = false;
+
+        if($this->numOfPlayers > count($this->players)){  
+            foreach($this->playersIDs as $nick => $id)
+                if($id >= $this->numOfPlayers){
+                    $this->players[$nick]->send("Kicked");
+                    $this->clients->detach($this->players[$toKick]);
+                    unset($this->players[$nick]);
+                    unset($this->playersIDs[$nick]);
+                }
+            $this->started = true;
+        }
+    }
+
+    public function getIDBySocket($socket){
+        $nick = array_search($socket, $this->players);
+        return $nick !== false ? $this->playersIDs[$nick] : false;
+    }
+
+    public function getSocketByID($id){
+        $nick = array_search($id, $this->playersIDs);
+        return $nick !== false ? $this->players[$nick] : false;
+    }
+
 
     private function admin($socket, $args){
         if(!isset($args[0]) || empty($args[0])) return false;
@@ -333,8 +423,19 @@ class GameServer implements MessageComponentInterface {
         if((count($this->players) + count($this->bots)) === $this->numOfPlayers){
             foreach($this->clients as $client) $client->send("Started");
             $this->started = true;
+            $this->startTime = date("Y-m-d h:i:s");
         }
         return true;
+    }
+
+    private function pause(){
+        $this->paused = true;  
+        foreach ($this->clients as $client) $client->send("Paused");
+    }
+
+    private function unpause(){
+        $this->paused = false;
+        foreach ($this->clients as $client) $client->send("Unpaused");
     }
 
     private function put($socket, $args){
@@ -383,99 +484,27 @@ class GameServer implements MessageComponentInterface {
         return true;
     }
 
-    private function pause(){
-        $this->paused = true;  
-        foreach ($this->clients as $client) $client->send("Paused");
-    }
+    private function writeToDB($winner){
+        $conn = new mysqli("localhost", "root", "", "tictactoe2");
+        if($conn->connect_error) return false;
 
-    private function unpause(){
-        $this->paused = false;
-        foreach ($this->clients as $client) $client->send("Unpaused");
-    }
+        $nick0 = array_search(0, $this->playersIDs);
+        $nick1 = array_search(1, $this->playersIDs);
+        $nick2 = array_search(2, $this->playersIDs);
+        $query = "INSERT INTO results (nick0, nick1, nick2, winner, startDate, endDate, port) VALUES (" 
+            . ($nick0 === false ? "NULL" : "'" . $nick0 . "'") . ", " 
+            . ($nick1 === false ? "NULL" : "'" . $nick1 . "'") . ", " 
+            . ($nick2 === false ? "NULL" : "'" . $nick2 . "'") . ", "
+            . ($winner === null ? "NULL" : "'" . $winner . "'") . ", '" 
+            . $this->startTime . "', '" 
+            . date("Y-m-d h:i:s") . "', '" 
+            . $this->port . "');";
 
-    public function checkWin(){
-        $result = $this->board->checkWin();  // [idPola, idKierunku]
-        if($result === null || empty($result) || count($result) < 2) return false;
-
-        $playerID = $this->board->getPlayerByField($result[0]);
-        $nick = (string)array_search($playerID, $this->playersIDs);
-
-        if($playerID === false || $nick === false) return false;
-
-        foreach ($this->clients as $client) 
-            $client->send("Won " . $playerID . ' ' . $nick . ' ' . $result[0] . ' ' . $result[1]);
-        $this->pause();
-        $this->started = false;
-
-        $this->loop->addTimer(6, function () {
-            if(!$this->started){
-                $this->resetGame($this->numOfPlayers, $this->board->serializeSizes(), $this->board->getTarget());
-                $this->unpause();
-            }
-        });
-        return true;
-    }
-
-    public function checkTie(){
-        if($this->board->checkTie()){
-            foreach($this->clients as $client)
-                $client->send("Tie");
-            $this->pause();
-            $this->started = false;
+        try{
+            $conn->query($query);
+            $conn->close();
         }
-
-        $this->loop->addTimer(6, function () {
-            if(!$this->started){
-                $this->resetGame($this->numOfPlayers, $this->board->serializeSizes(), $this->board->getTarget());
-                $this->unpause();
-            }
-        });
-    }
-
-    public function resetGame($numOfPl, $sizes, $target, $socket = null){
-        if(empty($numOfPl) || empty($sizes) || empty($target) || $target < 0){
-            if($socket !== null) $socket->send("Error 11");
-            return false;
-        }
-        if($numOfPl < 2 || $numOfPl > self::MAX_NUM_OF_PLAYERS){
-            if($socket !== null) $socket->send("Error 43");
-            return false;
-        }
-        if(empty(explode(self::SIZES_DELIMETER, $sizes))){
-            if($socket !== null) $socket->send("Error 44");
-            return false;
-        }
-        if($target < 0){
-            if($socket !== null) $socket->send("Error 45");
-            return false;
-        }
-
-        $this->numOfPlayers = (int)$numOfPl;
-        $this->board = new Board(explode(self::SIZES_DELIMETER, $sizes), $target);
-        $this->freeIDs = [];
-        for($i = 0; $i < $this->numOfPlayers; $i++) array_push($this->freeIDs, $i);
-        $this->started = false;
-
-        if($this->numOfPlayers > count($this->players)){  
-            foreach($this->playersIDs as $nick => $id)
-                if($id >= $this->numOfPlayers){
-                    $this->players[$nick]->send("Kicked");
-                    $this->clients->detach($this->players[$toKick]);
-                    unset($this->players[$nick]);
-                    unset($this->playersIDs[$nick]);
-                }
-            $this->started = true;
-        }
-    }
-
-    public function getIDBySocket($socket){
-        $nick = array_search($socket, $this->players);
-        return $nick !== false ? $this->playersIDs[$nick] : false;
-    }
-
-    public function getSocketByID($id){
-        $nick = array_search($id, $this->playersIDs);
-        return $nick !== false ? $this->players[$nick] : false;
+        catch(Exception $e){}
     }
 }
 
