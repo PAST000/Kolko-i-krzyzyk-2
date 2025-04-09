@@ -22,7 +22,7 @@ class NeuralNet{
     public const VALUES_SEPARATOR = ';';    //
 
     public function __construct($layers, $neuronsSizes, $rate){
-        if(!is_numeric($layers) || $layers < 0) throw new Exception("Incorrect number of layers.");
+        if(!is_numeric($layers) || $layers < 1) throw new Exception("Incorrect number of layers.");
         if(count($neuronsSizes) < $layers) throw new Exception("Not enough neurons.");
         if(!is_numeric($rate)) throw new Exception("Rate must be a number");
         if($rate == 0) throw new Exception("Rate must not be 0.");
@@ -147,6 +147,7 @@ class NeuralNet{
                 if($i < $inputsSize - 1) array_push($nextInps, $this->neurons[$i][$j]->getValue());
             }
         }
+        return true;
     }
 
     public function getResult(){
@@ -243,6 +244,5 @@ class NeuralNet{
             }
         return true;
     }
-
 }
 ?>
