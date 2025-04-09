@@ -15,7 +15,7 @@
 <body>
     <header>
         <img src="../resources/icon.png" alt="Nie udało się załadować ikony">
-        <h1>Kółko i krzyżyk 2</h1>
+        <h1 id="gameTitle">Kółko i krzyżyk 2</h1>
         <nav>
             <button id="howToButton">Jak grać</button> 
             <div class="line"></div>
@@ -112,7 +112,7 @@
                 93 Nie znaleziono gracza (Kick) <br/>
     </main>
     <footer>
-        Adam Stachowicz 2024
+        Adam Stachowicz 2025
     </footer>
 
     <div id="howToWrapper" class="modalWrapper"> <iframe src="../modals/modalHowTo.html" title="howToPlay"></iframe> </div>
@@ -121,6 +121,7 @@
 </html>
 
 <script>
+    document.getElementById("gameTitle").onclick = function(){ document.location.href = "../"; };
     document.getElementById("howToButton").onclick = function(){ document.getElementById("howToWrapper").style.display = "block"; };
     document.getElementById("controlButton").onclick = function(){ document.getElementById("controlWrapper").style.display = "block"; };
     document.getElementById("resultsButton").onclick = function(){ document.location.href = "../results"; }
