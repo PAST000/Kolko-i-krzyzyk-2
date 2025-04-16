@@ -71,7 +71,7 @@ class NeuralNet{
         }
 
         $txt = substr($txt, 0, -2);  // Usuwamy dwa separatory
-        $file = fopen($filename . ".txt", "w");
+        $file = fopen($filename, "w");
         if($file === false) return false;
         fwrite($file, $txt);
         fclose($file);
@@ -79,9 +79,9 @@ class NeuralNet{
     }
 
     public function read($filename){
-        $file = fopen($filename . ".txt", "r");
+        $file = fopen($filename, "r");
         if($file === false) return false;
-        $txt = fread($file, filesize($filename . ".txt"));
+        $txt = fread($file, filesize($filename));
         fclose($file);
 
         $layers = explode(self::LAYERS_SEPARATOR, $txt);
@@ -126,12 +126,6 @@ class NeuralNet{
         return true;
     }
 
-    public function setRate($new){
-        if($new < 0 || $new > self::MAX_RATE) return false;
-        $this->gradientRate = $new;
-        return true;
-    }
-
     public function calc($inps){
         if(count($inps) < $this->inputsSize) return false;
         $this->inputs = array_slice($inps, 0, $this->inputsSize);
@@ -147,23 +141,7 @@ class NeuralNet{
                 if($i < $inputsSize - 1) array_push($nextInps, $this->neurons[$i][$j]->getValue());
             }
         }
-        return true;
-    }
-
-    public function getResult(){
-        $arr = [];
-        for($i = 0; $i < count($this->neurons[$this->numOfLayers - 1]); $i++)
-            array_push($arr, $this->neurons[$this->numOfLayers - 1][$i]);
-        return $arr;
-    }
-
-    public function getGradient(){ return $this->gradient; }
-
-    public function setExpected($new){
-        if(count($new) < count($this->neurons[$this->numOfLayers - 1])) return false;
-        for($i = 0; $i < count($new); $i++) if(!is_numeric($new[$i])) return false;
-        $this->expected = array_slice($new, 0, count($this->neurons[$this->numOfLayers - 1]));
-        return true;
+        return $this->getResult();
     }
 
     public function calcDerivatives($exp){
@@ -200,25 +178,23 @@ class NeuralNet{
         return $this->gradient;
     }
 
-    public function applyGradient($gradient){
-        if(empty($gradient) || count($gradient) < $this->weightsAndBiasesCount) return false;
+    public function applyGradient($gradient, $additionalRate = 1){
+        if(empty($gradient) || count($gradient) < $this->weightsAndBiasesCount || !is_numeric($additionalRate)) return false;
         $gradientCounter = 0;
-        $oldGradient = [];
+        $actualRate = $additionalRate * $this->gradientRate;
+        $oldNeurons = $this->neurons;
 
         for($i = 0; $i < $this->numOfLayers; $i++)
             for($j = 0; $j < count($this->neurons[$i]); $j++){
-                for($k = 0; $k < $this->neurons[$i][$j]->getWeightCount(); $k++){
-                    array_push($oldGradient, $gradient[$gradientCounter]);
-                    if(!$this->neurons[$i][$j]->setWeight($k, $gradient[$gradientCounter])){
-                        $this->restoreGradient($oldGradient);
+                for($k = 0; $k < $this->neurons[$i][$j]->getWeightsCount(); $k++){
+                    if(!$this->neurons[$i][$j]->incrementWeight($k, $gradient[$gradientCounter] * $actualRate)){
+                        $this->neurons = $oldNeurons;
                         return false;
                     }
                     $gradientCounter++;
                 }
-
-                array_push($oldGradient, $gradient[$gradientCounter]);
-                if(!$this->neurons[$i][$j]->setBias($gradient[$gradientCounter])){
-                    $this->restoreGradient($oldGradient);
+                if(!$this->neurons[$i][$j]->incrementBias($gradient[$gradientCounter] * $actualRate)){
+                    $this->neurons = $oldNeurons;
                     return false;
                 }
                 $gradientCounter++;
@@ -226,23 +202,26 @@ class NeuralNet{
         return true;
     }
 
-    private function restoreGradient($gradient){  // Jeśli applyGradient zwróci false, to przywracamy stan poprzedni
-        if(empty($gradient)) return false;
-        $gradientCounter = 0;
-
-        for($i = 0; $i < $this->numOfLayers; $i++)
-            for($j = 0; $j < count($this->neurons[$i]); $j++){
-                for($k = 0; $k < $this->neurons[$i][$j]->getWeightCount(); $k++){
-                    if(!$this->neurons[$i][$j]->setWeight($k, $gradient[$gradientCounter])) return false;
-                    $gradientCounter++;
-                    if($gradientCounter >= count($gradient)) return false;
-                }
-
-                if(!$this->neurons[$i][$j]->setBias($gradient[$gradientCounter])) return false;
-                $gradientCounter++;
-                if($gradientCounter >= count($gradient)) return false;
-            }
+    public function setExpected($new){
+        if(count($new) < count($this->neurons[$this->numOfLayers - 1])) return false;
+        for($i = 0; $i < count($new); $i++) if(!is_numeric($new[$i])) return false;
+        $this->expected = array_slice($new, 0, count($this->neurons[$this->numOfLayers - 1]));
         return true;
     }
+
+    public function setRate($new){
+        if($new < 0 || $new > self::MAX_RATE) return false;
+        $this->gradientRate = $new;
+        return true;
+    }
+
+    public function getResult(){
+        $arr = [];
+        for($i = 0; $i < count($this->neurons[$this->numOfLayers - 1]); $i++)
+            array_push($arr, $this->neurons[$this->numOfLayers - 1][$i]);
+        return $arr;
+    }
+    public function getGradientRare(){ return $this->gradientRate; }
+    public function getGradient(){ return $this->gradient; }
 }
 ?>

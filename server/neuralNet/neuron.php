@@ -27,15 +27,33 @@ class Neuron{
         }
     }
 
-    public function getValue(){ return $this->value; }
-    public function getPreSigmoid(){ return $this->preSigmoid; } 
-    public function getBias(){ return $this->bias; }
-    public function getWeightsCount(){ return $this->weightsCount; }
-    public function getWeights(){ return $this->weights; }
-    public function getWeight($i){
-        if($i < 0 || $i >= $this->weightsCount) return false;
-        return $this->getWeights[$i];
+    public function randomize($size, $maxRandWeigth, $maxRandBias, $precision){
+        if(!is_numeric($size) || !is_numeric($maxRandWeigth) || !is_numeric($maxRandBias) || !is_numeric($precision)) return false;
+        if($size < 1 || $maxRandWeigth < 0 || $maxRandBias < 0 || $precision <= 0) return false;
+
+        $this->weightsCount = (int)$size;
+
+        $ratio = pow(10, $precision - 1);
+        $maxWeight = $maxRandWeigth * $ratio;
+        $maxBias = $maxRandBias * $ratio;
+
+        for($i = 0; $i < $this->weightsCount; $i++)
+            $this->weights[$i] = rand(-$maxWeight, $maxWeight) / $ratio;
+        $this->bias = rand(-$maxBias, $maxBias) / $ratio;
+        return true;
     }
+
+    public function calc($inputs){
+        if(count($inputs) < $this->$weightsCount) return false;
+        
+        for($i = 0; $i < $this->$weightsCount; $i++){
+            if(!is_numeric($inputs[$i])) return false;
+            $this->preSigmoid += $this->weights[$i] * $inputs[$i];
+        }
+        $this->preSigmoid -= $this->bias;
+        $this->value = sigmoid($this->preSigmoid);
+        return $this->value;
+    } 
 
     public function setWeight($i, $value){
         if($i < 0 || $i >= $this->$weightsCount || !is_numeric($value)) return false;
@@ -58,32 +76,26 @@ class Neuron{
         return true;
     }
 
-    public function calc($inputs){
-        if(count($inputs) < $this->$weightsCount) return false;
-        
-        for($i = 0; $i < $this->$weightsCount; $i++){
-            if(!is_numeric($inputs[$i])) return false;
-            $this->preSigmoid += $this->weights[$i] * $inputs[$i];
-        }
-        $this->preSigmoid -= $this->bias;
-        $this->value = sigmoid($this->preSigmoid);
-        return $this->value;
+    public function incrementWeight($i, $value){
+        if($i < 0 || $i >= $this->$weightsCount || !is_numeric($value)) return false;
+        $this->weights[$i] += $value;
+        return true;
     } 
 
-    public function randomize($size, $maxRandWeigth, $maxRandBias, $precision){
-        if(!is_numeric($size) || !is_numeric($maxRandWeigth) || !is_numeric($maxRandBias) || !is_numeric($precision)) return false;
-        if($size < 1 || $maxRandWeigth < 0 || $maxRandBias < 0 || $precision <= 0) return false;
-
-        $this->weightsCount = (int)$size;
-
-        $ratio = pow(10, $precision - 1);
-        $maxWeight = $maxRandWeigth * $ratio;
-        $maxBias = $maxRandBias * $ratio;
-
-        for($i = 0; $i < $this->weightsCount; $i++)
-            $this->weights[$i] = rand(-$maxWeight, $maxWeight) / $ratio;
-        $this->bias = rand(-$maxBias, $maxBias) / $ratio;
+    public function incrementBias($value){
+        if(!is_numeric($value)) return false;
+        $this->bias += $value;
         return true;
+    }
+
+    public function getValue(){ return $this->value; }
+    public function getPreSigmoid(){ return $this->preSigmoid; } 
+    public function getBias(){ return $this->bias; }
+    public function getWeightsCount(){ return $this->weightsCount; }
+    public function getWeights(){ return $this->weights; }
+    public function getWeight($i){
+        if($i < 0 || $i >= $this->weightsCount) return false;
+        return $this->getWeights[$i];
     }
 }
 ?>
