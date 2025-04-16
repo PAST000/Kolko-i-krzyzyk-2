@@ -20,10 +20,9 @@ function refreshInfo(players, target, turn, yourID, admin){
     for(let i = 0; i < keys.length; i++){
         const wrapper = document.createElement("div");
         const par = document.createElement("p");
-        const txt = document.createTextNode("[" + i + "] " + keys.find(key => players[key] === i));
+        const txt = document.createTextNode("[" + players[keys[i]] + "] " + keys.find(key => players[key] === players[keys[i]]));
 
         wrapper.classList.add("playerWrapper");
-
         par.appendChild(txt);
         wrapper.appendChild(par);
 
@@ -32,7 +31,6 @@ function refreshInfo(players, target, turn, yourID, admin){
             button.classList.add("kickButton");
             wrapper.appendChild(button);
         }
-
         childrenArray.push(wrapper);
     }
     document.getElementById("playersContainer").replaceChildren(...childrenArray);
@@ -58,4 +56,10 @@ window.onload = function() {
     document.getElementById("controlWrapper").style.display = "none"; 
     document.getElementById("winWrapper").style.display = "none";   
     document.getElementById("infoWrapper").style.display = "none"; 
+
+    document.getElementById("gameTitle").onclick = function(){ document.location.href = "../"; };
+    document.getElementById("howToButton").onclick = function(){ document.getElementById("howToWrapper").style.display = "block"; };
+    document.getElementById("controlButton").onclick = function(){ document.getElementById("controlWrapper").style.display = "block"; };
+    document.getElementById("resultsButton").onclick = function(){ document.location.href = "../results"; }
+    document.getElementById("error").ondblclick = function(){ document.getElementById("error").innerHTML = ""; }
 }

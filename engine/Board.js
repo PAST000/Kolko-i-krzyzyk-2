@@ -45,8 +45,8 @@ export default class Board{
         this.layers = Array.from({ length: this.Z }, () => []);
         this.chosenLayer = -1;  // -1 oznacza brak wybranej warstwy
         this.chosenField = -1;  // -1 oznacza brak wybranego pola
-        this.#playerIDs = ['O', 'X', 'C'];
-        this.#pawnTypes = {'O': "Sphere", 'X': "Cross", 'C': "Cone"};
+        this.#playerIDs = ['O', 'X', 'P'];
+        this.#pawnTypes = {'O': "Sphere", 'X': "Cross", 'P': "Cone"};
 
         this.#generateVertices();
         this.#generateFields();
@@ -138,7 +138,6 @@ export default class Board{
         else pos = this.idToArr(pos);
 
         type = type.toLowerCase();
-        //let center = this.#fields[id].center;
         let v1 = this.#fields[id].vertices[0];
         let v2 = this.#fields[id].vertices[6];
         let center = new Vertex((v1.x + v2.x)/2, (v1.y + v2.y)/2, (v1.z + v2.z)/2);  // Średnia dwóch wierzchołków leżacych na tej samej przekątnej
@@ -287,6 +286,7 @@ export default class Board{
     }
 
     setPrecision(prec){ 
+        if(typeof prec !== number || prec < 4) return false;
         this.precision = parseInt(prec); 
         this.engine.setPrecision(this.precision);
 
@@ -295,8 +295,9 @@ export default class Board{
                 this.#pawns[i] = new PseudoSphere(this.#pawns[i].center, this.#pawns[i].radius, this.precision, 
                                                   this.#pawns[i].fillColor, this.#pawns[i].lineClr, this.#pawns[i].lineWidth);
             else if(typeof(this.#pawns[i].precision) === "Cone")
-                this.#pawns[i] = new PseudoSphere(this.#pawns[i].center, this.#pawns[i].radius, this.#pawns[i].height, this.precision, 
+                this.#pawns[i] = new Cone(this.#pawns[i].center, this.#pawns[i].radius, this.#pawns[i].height, this.precision, 
                                                   this.#pawns[i].fillColor, this.#pawns[i].lineClr, this.#pawns[i].lineWidth);
+        return true;
     }
 
     setFieldsStyle(fillClr, lineClr, width){
@@ -316,6 +317,7 @@ export default class Board{
         }
         this.engine.setStyle(fillClr, lineClr, width);
         this.draw();
+        return true;
     }
 
     updatePawns(txt){

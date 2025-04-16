@@ -121,6 +121,10 @@
     <p id="error">Wprowadź poprawne dane</p>
 
     <div class="wrapper">
+        <label for="port">Port serwera: </label>
+        <input type="number" id="port" name="port" value="3310" min="1" max="65535" step="1">
+    </div>
+    <div class="wrapper">
         <label for="nickInput">Nick: </label>
         <input type="text" id="nickInput" name="nickInput" placeholder="Zostaw puste, jeśli nie chcesz dołącząć.">
     </div>
@@ -149,7 +153,7 @@
         <input type="number" id="players" name="players" value="2" min="2" max="3" required>
     </div>
     <div class="wrapper">
-        <label for="players">Długość łańcucha: </label>
+        <label for="target">Długość łańcucha: </label>
         <input type="number" id="target" name="target" value="3" min="3" max="15" required>
     </div>
 
@@ -204,6 +208,7 @@
         let dimsArr = [];
         const name = document.getElementById("nickInput").value;
         const trgt = document.getElementById("target").value;
+        let prt = parseInt(document.getElementById("port").value);
         
         for(let i = 1; i <= dims; i++){
             if(document.getElementById("dim" + i).value < 2){
@@ -213,13 +218,16 @@
             dimsArr[i - 1] = document.getElementById("dim" + i).value;
         }
 
+        numOfPlayers = parseInt(playersInput.value);
         if( dimsArr.length < 2 || numOfPlayers < 2 || trgt < 0){
             document.getElementById("error").style.display = "block";
             return;
         }
 
+        if(prt <= 0 || prt > 65535 || isNaN(prt)) prt = 3310;
+
         sessionStorage.clear();
-        sessionStorage.setItem("hostData", JSON.stringify({ nick: name, nOfPlayers : numOfPlayers, sizes : dimsArr, target : trgt }));
+        sessionStorage.setItem("hostData", JSON.stringify({ port : prt, nick: name, nOfPlayers : numOfPlayers, sizes : dimsArr, target : trgt }));
         window.parent.postMessage("closeModal", "*"); 
         window.parent.location.href = "../game";
     };
