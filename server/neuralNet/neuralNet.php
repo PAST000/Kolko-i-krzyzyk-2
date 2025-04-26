@@ -3,7 +3,7 @@ require "neuron.php";
 
 class NeuralNet{
     private $inputsSize = 0;
-    private $numOfLayers = 0;
+    private $numOfLayers = 0;  // Bez warstwy wejść
     private $inputs = [];
     private $neurons = [];  // [warstwa, neuron]
     private $expected = [];
@@ -13,6 +13,7 @@ class NeuralNet{
     private $gradientRate = 0;
     private $weightsAndBiasesCount = 0;  // Łączna liczba wag i biasów, do sprawdzania poprawności gradientu
 
+    public const FILE_EXTENSION = ".txt";
     public const MAX_RAND_WEIGHT = 10;      // Największa (również w. bezwględna z najmniejszej) wartość wagi
     public const MAX_RAND_BIAS = 10;
     public const MAX_RATE = 100;            // Maksymalna wartość $this->gradientRate
@@ -21,42 +22,52 @@ class NeuralNet{
     public const NEURONS_SEPARATOR = '/';   // JEDEN ZNAK!
     public const VALUES_SEPARATOR = ';';    //
 
-    public function __construct($layers, $neuronsSizes, $rate){
-        if(!is_numeric($layers) || $layers < 1) throw new Exception("Incorrect number of layers.");
-        if(count($neuronsSizes) < $layers) throw new Exception("Not enough neurons.");
+    public function __construct($neuronsSizes, $rate){
+        if(count($neuronsSizes) < 2) throw new Exception("Not enough layers.");
+        if((int)$neuronsSizes[0] < 1) throw new Exception("Incorrect number of inputs.");
         if(!is_numeric($rate)) throw new Exception("Rate must be a number");
         if($rate == 0) throw new Exception("Rate must not be 0.");
+        file_put_contents("logsKiK2/net.txt", "2", FILE_APPEND);
 
-        $this->numOfLayers = (int)$layers;
-        $this->inputsSize = $neuronsSizes[0];
-        $this->gradientRate = (int)$rate;
+        $this->numOfLayers = count($neuronsSizes) - 1;
+        $this->inputsSize = (int)$neuronsSizes[0];
+        $this->gradientRate = (float)$rate;
+        file_put_contents("logsKiK2/sizes.txt", print_r($neuronsSizes, true), FILE_APPEND);
 
-        for($i = 1; $i < $this->numOfLayers; $i++){
+        for($i = 0; $i < $this->numOfLayers; $i++){
+            file_put_contents("logsKiK2/net.txt", (int)(!is_numeric($neuronsSizes[$i]) || (int)$neuronsSizes[$i] < 1), FILE_APPEND);
             array_push($this->neurons, array());
-            if(!is_numeric($neuronsSizes[$i]) || $neuronsSizes[$i] <= 0){
+            if(!is_numeric($neuronsSizes[$i]) || (int)$neuronsSizes[$i] < 1){
                 throw new Exception("All neurons sizes must be numeric and greater than 0.");
                 return;
             }
 
-            for($j = 0; $j < $neuronsSizes[$i]; $j++){
+            file_put_contents("logsKiK2/weight.txt", $neuronsSizes[$i] . PHP_EOL . (int)$neuronsSizes[$i], FILE_APPEND);
+            for($j = 0; $j < (int)$neuronsSizes[$i]; $j++){
+                file_put_contents("logsKiK2/creatingNeurons.txt", $i . ' ' . $j . PHP_EOL, FILE_APPEND);
                 try{
-                    $neuron = new Neuron(null);
-                    $neuron->randomize($neuronsSizes[$i - 1], self::MAX_RAND_WEIGHT, self::MAX_RAND_BIAS, self::VALUE_PRECISION);
-                    array_push($this->neurons[$i - 1], $neuron);
+                    array_push($this->neurons[$i], new Neuron((int)$neuronsSizes[$i], null));
                 }
                 catch(Exception $e) {
+                    file_put_contents("logsKiK2/error.txt", $e, FILE_APPEND);
                     throw new Exception("Something went wrong while creating neurons.");
                 }
             }
+            file_put_contents("logsKiK2/net.txt", "5", FILE_APPEND);
         }
+        file_put_contents("logsKiK2/net.txt", "CONSTRUCTED", FILE_APPEND);
     }
 
     public function save($filename){
-        $txt = (string)count($this->inputs) . self::LAYERS_SEPARATOR;  // Pierwsza "warstwa" to ilość wejść
+        if(empty($filename)) return false;
+        if(!preg_match("/.+" . self::FILE_EXTENSION . "/", $filename)) $filename .= self::FILE_EXTENSION;
+
+        $txt = count($this->inputs) . self::LAYERS_SEPARATOR;  // Pierwsza "warstwa" to ilość wejść
         for($i = 0; $i < $this->numOfLayers; $i++){
             for($j = 0; $j < count($this->neurons[$i]); $j++){
                 for($k = 0; $k < $this->neurons[$i][$j]->getWeightsCount(); $k++){
-                    if(!$this->neurons[$i][$j]->getWeight($k)){
+                    file_put_contents("logsKiK2/save.txt", $i . ' ' . $j . ' ' . $k . PHP_EOL, FILE_APPEND);
+                    if($this->neurons[$i][$j]->getWeight($k) === false){
                         fclose($file);
                         return false;
                     }
@@ -67,11 +78,14 @@ class NeuralNet{
                 $txt .= $this->neurons[$i][$j]->getBias();
                 $txt .= self::NEURONS_SEPARATOR;
             }
+            file_put_contents("logsKiK2/save.txt", PHP_EOL . "AAA", FILE_APPEND);
             $txt .= self::LAYERS_SEPARATOR;
         }
 
-        $txt = substr($txt, 0, -2);  // Usuwamy dwa separatory
+        file_put_contents("logsKiK2/save.txt", PHP_EOL . "7", FILE_APPEND);
+        $txt = substr($txt, 0, -1);  // Usuwam separator warstwy (Neuronów zostaje!)
         $file = fopen($filename, "w");
+        file_put_contents("logsKiK2/save.txt", PHP_EOL . "8", FILE_APPEND);
         if($file === false) return false;
         fwrite($file, $txt);
         fclose($file);
@@ -79,6 +93,9 @@ class NeuralNet{
     }
 
     public function read($filename){
+        if(empty($filename)) return false;
+        if(!preg_match("/.+" . self::FILE_EXTENSION . "/", $filename)) $filename .= self::FILE_EXTENSION;
+        
         $file = fopen($filename, "r");
         if($file === false) return false;
         $txt = fread($file, filesize($filename));
@@ -86,8 +103,8 @@ class NeuralNet{
 
         $layers = explode(self::LAYERS_SEPARATOR, $txt);
         if(count($layers) < 2) return false;  // Poprawny rozmiar to: ilość warstw + 1 (inputs)
-        if(count($layers[0]) < 1 || count($layers[1]) < 1) return false;
-        if(!is_numeric($layers[0])) return false;
+        if(empty($layers[0]) || empty($layers[1])) return false;
+        if(!is_numeric($layers[0]) || (int)$layers[0] < 1) return false;
 
         $oldNeurons = $this->neurons;
         $oldInputsSize = count($this->inputsSize);

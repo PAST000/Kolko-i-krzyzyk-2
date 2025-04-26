@@ -13,10 +13,19 @@ class Neuron{
     public const VALUE_PRECISION = 5;       // Ilość cyfr (razem z cyfrą jedności) wartości (wag i bias'ów) 
 
     public function __construct($arr, $b){  // Tablica wag, bias 
+        file_put_contents("logsKiK2/neuron.txt", print_r($arr, true), FILE_APPEND);
         if($arr === null)
             $this->randomize(1, self::MAX_RAND_WEIGHT, self::MAX_RAND_BIAS, self::VALUE_PRECISION);
+        else if(is_numeric($arr)){
+            file_put_contents("logsKiK2/neuron.txt", "A", FILE_APPEND);
+            if($this->randomize((int)$arr, self::MAX_RAND_WEIGHT, self::MAX_RAND_BIAS, self::VALUE_PRECISION) === false){
+                throw new Exception("Incorrect weights count.");
+                file_put_contents("logsKiK2/neuron.txt", "B", FILE_APPEND);
+            }
+        }
         else{
-            if(empty($arr) || count($arr) < 1) throw new Exception("The weights array is empty.");
+            if(empty($arr) || count($arr) < 1) 
+                throw new Exception("The weights array is empty.");
             for($i = 0; $i < count($arr); $i++)
                 if(!is_numeric($arr[$i])) 
                     throw new Exception("Weight nr. " . $i . " is not a number.");
@@ -95,7 +104,7 @@ class Neuron{
     public function getWeights(){ return $this->weights; }
     public function getWeight($i){
         if($i < 0 || $i >= $this->weightsCount) return false;
-        return $this->getWeights[$i];
+        return $this->weights[$i];
     }
 }
 ?>
