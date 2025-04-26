@@ -7,50 +7,49 @@ class Agent{
     private $boardSeparator = ',';
     private $inputFile = "";
     private $outputFile = "defaultNNetoutput";
-    private $fileExtension = ".txt";
     private $result = [];
     private $gradients = [];
     private $game = [];  // stos tablic: id => [wejście, wyjście, wybrane]
 
+    public const LEARNING_RATE = 0.1;
     public const GRADIENT_COUNT_TRESHOLD = 50;  // "Potrzebna" ilość gradientów z której bierzemy średnią i uczymy
     public const DRAW_REWARD = 0.75;
     public const FIRST_MOVE_WEIGHT = 0.1;
     public const LAST_MOVE_WEIGHT = 2;
-
     public const PAWNS = ['O', 'X', 'P'];
-    public const PAWNS_COUNT = 3;
+    public const hiddenNeuronsCounts = [20, 20];
 
-    public const boardX = 4;
-    public const boardY = 4;
-    public const boardZ = 4;
-    public const BOARD_SIZE = self::boardX * self::boardY * self::boardZ;
-    public const INPUT_SIZE = self::PAWNS_COUNT * self::BOARD_SIZE + 3; 
-    // WEJŚCIA: 64 na jednego gracza (x3, jeśli dwóch graczy ostatnie to same zera); 1,0 jeśli dwóch graczy i 0,1 jeśli trzech; cel 
-
-    public function __construct($separator, $layers, $neurons, $learn = false, $rate = 1){
-        if(count($separator) !== 1) throw new Exception("Separator must be exaclty one char long.");
-        if(!is_numeric($layers) || $layers < 1) throw new Exception("Number of layers must be greater or equal 1.");
-        if(empty($neurons) || count($neurons) < 1) throw new Exception("Incorrect neuron sizes.");
+    public function __construct($separator, $boardCount, $learn = false){
+        if(strlen($separator) !== 1) throw new Exception("Separator must be exaclty one char long.");
+        if(!is_numeric($boardCount) || (int)$boardCount < 1) throw new Exception("Incorrect board count.");
         if(!is_numeric($rate) || $rate == 0) throw new Exception("Rate must be a number other than 0.");
 
         $this->boardSeparator = $separator;
         $this->ifLearn = boolval($learn);
-        $this->net = new NeuralNet($layers, $neurons, (int)$rate);
+
+        // WEJŚCIA: $boardCount na jednego gracza (trzech graczy czyli x3, jeśli dwóch graczy ostatnie to same zera); 
+        // Na końcu: 1,0 jeśli dwóch graczy i 0,1 jeśli trzech; cel (liczba całkowita)
+        $this->net = new NeuralNet(array_merge(
+                                       array(count(self::PAWNS) * $boardCount + 3), 
+                                       self::hiddenNeuronsCounts, 
+                                       array($boardCount)
+                                    ), 
+                                   self::LEARNING_RATE);
     }
 
     public function loadFromFile($filename){
         if(empty($filename)) return false;
         $this->inputFile = $filename;
-        return $this->net->read($filename . $this->fileExtension);
+        return $this->net->read($filename);
     }
 
     public function saveToFile($filename){
         if(empty($filename)) return false;
-        return $this->net->save($filename . $this->fileExtension);
+        return $this->net->save($filename);
     }
 
     public function boardToInput($txt, $target, $self){
-        if(!is_numeric($self) || $self < 0 || $self >= self::PAWNS_COUNT || !iiset(self::PAWNS($self))) return false;
+        if(!is_numeric($self) || $self < 0 || $self >= count(self::PAWNS) || !iiset(self::PAWNS($self))) return false;
         if(empty($txt) || !is_numeric($target) || $target <= 0 ) return false;
 
         $board = explode($this->getBoardSeparator, strtoupper($txt));
@@ -63,13 +62,13 @@ class Agent{
             array_push($input, ($board[$j] === self::PAWNS[$self] ? 1 : 0));
         $pawns = array_diff($pawns, array(self::PAWNS[$self]));
 
-        for($i = 0; $i < self::PAWNS_COUNT - 1; $i++){
+        for($i = 0; $i < count(self::PAWNS) - 1; $i++){
             for($j = 0; $j < count($board); $j++)
                 array_push($input, ($board[$j] === $pawns[0] ? 1 : 0));
             array_shift($pawns);
         }
 
-        array_push($input, self::PAWNS_COUNT === 2 ? 1 : 0, self::PAWNS_COUNT === 2 ? 0 : 1);
+        array_push($input, count(self::PAWNS) === 2 ? 1 : 0, count(self::PAWNS) === 2 ? 0 : 1);
         array_push($input, (int)$target);
         return $input;
     }

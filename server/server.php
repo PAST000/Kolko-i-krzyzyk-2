@@ -37,7 +37,7 @@ class Server implements MessageComponentInterface {
         echo "Połączenie zamknięte: {$conn->resourceId}\n";
     }
 
-    public function onError(ConnectionInterface $conn, \Exception $e) {
+    public function onError(ConnectionInterface $conn, \Exception $e) {  // TODO
         echo "Błąd: {$e->getMessage()}\n";
         $conn->close();
     }

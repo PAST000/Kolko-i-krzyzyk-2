@@ -14,7 +14,8 @@ class GameServer implements MessageComponentInterface {
     protected $clients;
     protected $players = [];     // nick => socket, jeśli [nick] === null to nie ma takiego gracza
     protected $playersIDs = [];  // nick => id
-    protected $bots = [];        // id => [nick, sieć]
+    protected $bots = [];        // nick => sieć
+    protected $botsIDs = [];     // nick => id
 
     protected $freeIDs = [0,1,2];
     protected $board;
@@ -27,13 +28,17 @@ class GameServer implements MessageComponentInterface {
     protected $turn = 0;
     protected $paused = false;
     protected $stopRefresh = false;  // Jeśli funkcja interpretująca ma nie zwracać false (np przy ping), ale chcemy zatrzymać refresh
+    protected $resetTime = 7;        // Czas od zakończenia gry do automatycznego ponownego startu (w senkundach)
 
     protected $loop;
     protected $shutdownTimer = null;
     protected $startTime;
 
+    const IF_LEARN = true;  // Do sieci neuronowych
+    const LEARNING_RATE = 0.1;
+
     const MSG_DELIMETER = ' ';
-    const SIZES_DELIMETER = ',';  // Ogółem przy większości implode()
+    const SIZES_DELIMETER = ',';  // Ogółem przy większości implode/explode
     const MAX_NUM_OF_PLAYERS = 3;
 
     public function __construct($mainPort, $prt, $maxPlayers, $sizes, $target, $lp) {
@@ -52,7 +57,7 @@ class GameServer implements MessageComponentInterface {
         $this->startTime = date("Y-m-d h:i:s");
 
         $this->freeIDs = [];
-        for($i = 0; $i < $this->numOfPlayers; $i++) array_push($this->freeIDs, $i);
+        for($i = 0; $i < $this->numOfPlayers; $i++) $this->freeIDs[] = $i;
     }
 
     public function __destruct(){
@@ -86,7 +91,7 @@ class GameServer implements MessageComponentInterface {
         if($socket === $this->admin) $this->admin = null;
         if($nick === false) return false;  // Jeśli klient nie jest graczem
 
-        array_push($this->freeIDs, $this->playersIDs[$nick]);
+        $this->freeIDs[] = $this->playersIDs[$nick];
         unset($this->playersIDs[$nick]);
         unset($this->players[$nick]);
 
@@ -103,10 +108,8 @@ class GameServer implements MessageComponentInterface {
     public function onError(ConnectionInterface $socket, \Exception $e) { $socket->close(); }  // TODO
 
     public function onMessage(ConnectionInterface $socket, $msg) {
-        //file_put_contents("logsKiK2/gameMessages.txt", $msg, FILE_APPEND);     // FILE LOG
-        
         $args = explode(self::MSG_DELIMETER, $msg);
-        if(empty($args[0])){ return; }
+        if(!$this->checkArgs($socket, $args)) return;
         if($this->paused && strtolower($args[0]) !== "setnick"){
             $socket->send("Error 12");
             return;
@@ -136,9 +139,9 @@ class GameServer implements MessageComponentInterface {
         $this->started = false;
         $this->writeToDB($nick);
 
-        $this->loop->addTimer(7, function () {
+        $this->loop->addTimer($this->resetTime, function () {
             if(!$this->started){
-                $this->resetGame($this->numOfPlayers, $this->board->serializeSizes(), $this->board->getTarget());
+                $this->resetGame($this->numOfPlayers, $this->board->serializeSizes(), $this->board->getTarget(), $this->admin);
                 $this->unpause();
             }
         });
@@ -153,13 +156,14 @@ class GameServer implements MessageComponentInterface {
             $this->started = false;
             $this->writeToDB(null);
 
-            $this->loop->addTimer(7, function () {
+            $this->loop->addTimer($this->resetTime, function () {
                 if(!$this->started){
                     $this->resetGame($this->numOfPlayers, $this->board->serializeSizes(), $this->board->getTarget());
                     $this->unpause();
                 }
             });
         }
+        return true;
     }
 
     public function resetGame($numOfPl, $sizes, $target, $socket = null){
@@ -183,7 +187,7 @@ class GameServer implements MessageComponentInterface {
         $this->numOfPlayers = (int)$numOfPl;
         $this->board = new Board(explode(self::SIZES_DELIMETER, $sizes), $target);
         $this->freeIDs = [];
-        for($i = 0; $i < $this->numOfPlayers; $i++) array_push($this->freeIDs, $i);
+        for($i = 0; $i < $this->numOfPlayers; $i++) $this->freeIDs[] = $i;
         $this->started = false;
 
         if($this->numOfPlayers > count($this->players)){  
@@ -196,6 +200,8 @@ class GameServer implements MessageComponentInterface {
                 }
             $this->started = true;
         }
+        $this->refresh();
+        return true;
     }
 
     public function getIDBySocket($socket){
@@ -209,6 +215,173 @@ class GameServer implements MessageComponentInterface {
     }
 
 
+    private function checkArgs($socket, $args){
+        if(empty($args)){
+            $socket->send("Error 11");
+            return false;
+        }
+        if(!isset($args[0]) || empty($args[0])){
+            $socket->send("Error 10");
+            return false;
+        }
+
+        switch(strtolower($args[0])){
+            case "create":
+                if($socket !== $this->admin){
+                    $socket->send("Error 01");
+                    return false;
+                }
+                if(count($args) < 4){
+                    $socket->send("Error 11");
+                    return false;
+                }
+                if(!is_numeric($args[1]) || (int)$args[1] <= 0 || (int)$args[1] > self::MAX_NUM_OF_PLAYERS){
+                    $socket->send("Error 43");
+                    return false;
+                }
+                if(empty(explode(self::SIZES_DELIMETER, $args[2]))){
+                    if($socket !== null) $socket->send("Error 44");
+                    return false;
+                }
+                if(!is_numeric($args[3]) || (int)$args[3] <= 0){
+                    $socket->send("Error 45");
+                    return false;
+                }
+                break;
+
+            case "clear":
+                if($socket !== $this->admin){
+                    $socket->send("Error 01");
+                    return false;
+                }
+                if(count($args) < 2){
+                    $socket->send("Error 11");
+                    return false;
+                }
+                if(empty(explode(self::SIZES_DELIMETER, $args[1])) || count(explode(self::SIZES_DELIMETER, $args[1])) < 2){
+                    $socket->send("Error 91");
+                    return false;
+                }
+                break;
+
+            case "clearplayer":  // Łączymy case'y
+            case "setturn":
+            case "kick":
+                if($socket !== $this->admin){
+                    $socket->send("Error 01");
+                    return false;
+                }
+                if(count($args) < 2){
+                    $socket->send("Error 11");
+                    return false;
+                }
+                if(!is_numeric($args[1]) || (int)$args[1] < 0 || (int)$args[1] >= count($this->players)){
+                    $socket->send("Error 91");
+                    return false;
+                }
+                break;
+            case "put":
+                if(count($args) < 2){
+                    $socket->send("Error 11");
+                    return false;
+                }
+                if(array_search($socket, $this->players) === false){
+                    $socket->send("Error 00");
+                    return false;
+                }
+                if($this->turn !== $this->getIDBySocket($socket)){
+                    $socket->send("Error 22");
+                    return false;
+                }
+                if(count(explode(self::SIZES_DELIMETER, $args[1])) < 2){  // TODO
+                    $socket->send("Error 21");
+                    return false;
+                }
+                break;
+    
+            case "setnick":
+                if(count($args) < 2){
+                    $socket->send("Error 11");
+                    return false;
+                }
+                if(count($args) === 3){
+                    if($socket !== $this->admin){
+                        $socket->send("Error 01");
+                        return false;
+                    }
+                    if(!is_numeric($args[2]) || (int)$args[2] < 0 || (int)$args[2] >= count($this->players)){
+                        $socket->send("Error 81");
+                        return false;
+                    }
+                }
+                if(empty($args[1])){
+                    $socket->send("Error 31");
+                    return false;
+                }
+                if($this->players[$args[1]] !== null){
+                    $socket->send("Error 33");
+                    return false;
+                }
+                break;
+            case "join": 
+                if(count($this->freeIDs) < 1){
+                    $socket->send("Error 30");
+                    return false;
+                }
+                if(count($args) < 2){
+                    $socket->send("Error 11");
+                    return false;
+                }
+                if(empty($args[1]) || preg_match("/\s/", $args[1])){  // Pusty lub zawiera dowolne białe znaki
+                    $socket->send("Error 31");
+                    return false;
+                }
+                if($this->players[$args[1]] !== null){
+                    $socket->send("Error 33");
+                    return false;
+                }
+                if(in_array($socket, $this->players)){
+                    $socket->send("Error 34");
+                    return false;
+                }
+                break; 
+            case "addbot": 
+                if($socket !== $this->admin){
+                    $socket->send("Error 01");
+                    return false;
+                }
+                if(count($this->freeIDs) < 1){
+                    $socket->send("Error 30");
+                    return false;
+                }
+                if(count($args) < 2){
+                    $socket->send("Error 11");
+                    return false;
+                }
+                if(empty($args[1])){
+                    $socket->send("Error 31");
+                    return false;
+                }
+                if($this->players[$args[1]] !== null || $this->bots[$args[1]] !== null){
+                    $socket->send("Error 33");
+                    return false;
+                }
+                break; 
+
+            case "drop": break;
+            case "pause": break;
+            case "unpause": break;
+            case "ping": break;
+            case "reping": break;
+            default: 
+                $socket->send("Error 10");
+                return false;
+                break;
+        }
+        return true;
+    }
+
+    // Z racji na istnienie checkArgs zakładamy, że argumenty są poprawne, poniżej również
     private function admin($socket, $args){
         if(!isset($args[0]) || empty($args[0])) return false;
 
@@ -222,10 +395,6 @@ class GameServer implements MessageComponentInterface {
                 break;
 
             case "clear":
-                if(empty($args[1])) {
-                    $socket->send("Error 11");
-                    return false;
-                }
                 if(!$this->board->clear($this->board->arrToId(explode(self::SIZES_DELIMETER, $args[1])))){
                     $socket->send("Error 91");
                     return false;
@@ -233,10 +402,6 @@ class GameServer implements MessageComponentInterface {
                 break;
 
             case "clearplayer":
-                if(empty($args[1])) {
-                    $socket->send("Error 11");
-                    return false;
-                }
                 if(!$this->board->clearPlayer($args[1])){
                     $socket->send("Error 91");
                     return false;
@@ -244,11 +409,6 @@ class GameServer implements MessageComponentInterface {
                 break;
 
             case "kick":
-                if(empty($args[1])) {
-                    $socket->send("Error 11");
-                    return false;
-                }
-
                 $toKick = array_search($args[1], $this->playersIDs);
                 if($toKick === false){
                     $socket->send("Error 93");
@@ -256,7 +416,7 @@ class GameServer implements MessageComponentInterface {
                 }
 
                 $this->players[$toKick]->send("Kicked");
-                array_push($this->freeIDs, $this->playersIDs[$toKick]);
+                $this->freeIDs[] = $this->playersIDs[$toKick];
                 
                 $this->clients->detach($this->players[$toKick]);
                 unset($this->players[$toKick]); 
@@ -268,27 +428,10 @@ class GameServer implements MessageComponentInterface {
                 break;
 
             case "setturn":
-                if(empty($args[1])){
-                    $socket->send("Error 11");
-                    return false;
-                }
-                if($args[1] < 0 || $args[1] >= ($this->started ? count($this->players) : $this->numOfPlayers)){
-                    $socket->send("Error 81");
-                    return false;
-                }
-                $this->turn = $args[1];
+                $this->turn = (int)$args[1] < 0 ? 0 : (int)$args[1];
                 break;
 
             case "setnick":
-                if(empty($args[1])){
-                    $socket->send("Error 11");
-                    return false;
-                }
-                if($this->players[$args[1]] !== null){
-                    $socket->send("Error 33");
-                    return false;
-                }
-
                 $oldNick = "";
                 foreach($this->players as $nick => $sockID)
                     if($sockID[0] == $socket){
@@ -353,15 +496,6 @@ class GameServer implements MessageComponentInterface {
                 break;
 
             case "setnick":
-                if(empty($args[1])){
-                    $socket->send("Error 11");
-                    return false;
-                }
-                if($this->players[$args[1]] !== null){
-                    $socket->send("Error 33");
-                    return false;
-                }
-
                 $oldNick = "";
                 foreach($this->players as $nick => $sockID)
                     if($sockID[0] == $socket){
@@ -399,23 +533,6 @@ class GameServer implements MessageComponentInterface {
     }
 
     private function join($socket, $args){
-        if(array_search($socket, $this->players) !== false){
-            $socket->send("Error 34");
-            return false;
-        }
-        if(count($this->freeIDs) < 1){
-            $socket->send("Error 30");
-            return false;
-        }
-        if(empty($args[1])){
-            $socket->send("Error 31");
-            return false;
-        }
-        if($this->players[$args[1]] !== null){
-            $socket->send("Error 33");
-            return false;
-        }
-
         $this->players[$args[1]] = $socket;
         $this->playersIDs[$args[1]] = array_shift($this->freeIDs);
         $socket->send("Joined");
@@ -439,18 +556,9 @@ class GameServer implements MessageComponentInterface {
     }
 
     private function put($socket, $args){
-        if(array_search($socket, $this->players) === false){
-            $socket->send("Error 00");
-            return false;
-        }
-        if(count($args) < 2){
-            $socket->send("Error 11");
-            return false;
-        }
-
         $id = $this->getIDBySocket($socket);
         if($this->turn !== $id){
-            $socket->send("Error 23");
+            $socket->send("Error 22");
             return false;
         }
         if(!$this->board->put(explode(self::SIZES_DELIMETER, $args[1]), $id)){
@@ -465,22 +573,36 @@ class GameServer implements MessageComponentInterface {
         return true;
     }
 
-    private function addBot($socket, $args){
-        /*if(count($this->freeIDs) < 1){
-            $socket->send("Error 30");
-            return false;
-        }
-        if(empty($args[1])){
-            $socket->send("Error 31");
-            return false;
-        }
-        if($this->players[$args[1]] !== null){
-            $socket->send("Error 33");
-            return false;
-        }
+    private function addBot($socket, $args, $filename = null){
+        try{
+            $agent = new Agent(self::SIZES_DELIMETER, 
+                               $this->board->count(), 
+                               self::IF_LEARN);
+            if(!empty($filename)) $agent->loadFromFile($filename);
 
-        $this->bots[array_shift($this->freeIDs)] = [$args[1], null];  // TODO: kick bota*/
+            $this->bots[] = $agent;
+            $this->botsIDs[] = array_shift($this->freeIDs);
+            $agent->saveToFile("logsKiK2/netSave.txt");
+        }
+        catch(Exception $e){ 
+            return false; 
+        }
+        return true;
+    }
 
+    private function botTurn(){  // Razem ze sprawdzeniem czy tura bota
+        $nick = array_search($this->turn, $this->botsIDs);
+        if($nick === false) return false;
+        $move = $this->bots[$nick]->makeMove($this->board->implode($this->bots[$nick]->getBoardSeparator()), 
+                                             $this->board->getTarget(), 
+                                             $this->board::PAWNS[$this->turn]);
+        if($move === false) return false;
+        if(!$this->board->putByID($move, $this->board::PAWNS[$this->turn])) return false;
+        
+        $this->turn++;
+        $this->turn %= count($this->players);
+        $this->checkWin();
+        $this->checkTie();
         return true;
     }
 
@@ -504,7 +626,8 @@ class GameServer implements MessageComponentInterface {
             $conn->query($query);
             $conn->close();
         }
-        catch(Exception $e){}
+        catch(Exception $e){ return false; }
+        return true;
     }
 }
 
