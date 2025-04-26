@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<style>
+    #modalWrapper{
+        border: 7px solid rgb(192, 0, 0);
+        border-radius: 10px;
+        padding: 20px;
+        padding-top: 10px;
+        width: 25%;
+        background-color: rgb(101, 208, 250);
+        margin: auto;
+        margin-top: 40vh;
+    }
+
+    #close{
+        float: right;
+        background-color: transparent;
+        font-weight: bold;
+        font-size: 22px;
+        border: 0;
+    }
+
+    #info{
+        text-align: center;
+        font-size: x-large;
+        font-weight: bold;
+    }
+</style>
+
+<html lang="pl">
+<head>
+    <meta charset="utf-8">
+</head>
+
+<section id="modalWrapper">
+    <button id="close">&times</button><br>
+    <p id="info">Nie udało się wczytać zawartości informacji.</p>
+</section>
+</html>
+
+<script>
+    window.addEventListener("message", function(event) {
+        if(event.data === "showError") {
+            let json = sessionStorage.getItem("errorData");
+            if(json === null) window.parent.postMessage("closeError", "*"); 
+            let errorData = JSON.parse(json);
+            if(errorData.txt === null) window.parent.postMessage("closeError", "*"); 
+            document.getElementById("info").innerHTML = errorData.txt; 
+        }
+    });
+    document.getElementById("close").onclick = function() { 
+        window.parent.postMessage("closeError", "*"); 
+    };
+</script>

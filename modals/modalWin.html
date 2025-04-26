@@ -71,11 +71,9 @@
 <script>
     window.addEventListener("message", function(event) {
         if(event.data === "showWin") {
-            let json = sessionStorage.getItem("winData");
-            if(json === null) window.parent.postMessage("closeModal", "*"); 
-            
-            let winData = JSON.parse(json);
-            if(winData.id === null || winData.nick === null) window.parent.postMessage("closeModal", "*"); 
+            let winData = JSON.parse(sessionStorage.getItem("winData"));
+            if(winData.id === null || winData.nick === null) 
+                window.parent.postMessage("closeModal", "*"); 
 
             document.getElementById("close").onclick = function() { 
                 window.parent.postMessage("closeModal", "*"); 
