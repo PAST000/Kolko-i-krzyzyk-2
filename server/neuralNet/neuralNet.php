@@ -27,46 +27,36 @@ class NeuralNet{
         if((int)$neuronsSizes[0] < 1) throw new Exception("Incorrect number of inputs.");
         if(!is_numeric($rate)) throw new Exception("Rate must be a number");
         if($rate == 0) throw new Exception("Rate must not be 0.");
-        file_put_contents("logsKiK2/net.txt", "2", FILE_APPEND);
 
         $this->numOfLayers = count($neuronsSizes) - 1;
         $this->inputsSize = (int)$neuronsSizes[0];
         $this->gradientRate = (float)$rate;
-        file_put_contents("logsKiK2/sizes.txt", print_r($neuronsSizes, true), FILE_APPEND);
 
-        for($i = 0; $i < $this->numOfLayers; $i++){
-            file_put_contents("logsKiK2/net.txt", (int)(!is_numeric($neuronsSizes[$i]) || (int)$neuronsSizes[$i] < 1), FILE_APPEND);
-            array_push($this->neurons, array());
+        for($i = 1; $i <= $this->numOfLayers; $i++){
+            $this->neurons[] = array();
             if(!is_numeric($neuronsSizes[$i]) || (int)$neuronsSizes[$i] < 1){
                 throw new Exception("All neurons sizes must be numeric and greater than 0.");
                 return;
             }
-
-            file_put_contents("logsKiK2/weight.txt", $neuronsSizes[$i] . PHP_EOL . (int)$neuronsSizes[$i], FILE_APPEND);
             for($j = 0; $j < (int)$neuronsSizes[$i]; $j++){
-                file_put_contents("logsKiK2/creatingNeurons.txt", $i . ' ' . $j . PHP_EOL, FILE_APPEND);
                 try{
-                    array_push($this->neurons[$i], new Neuron((int)$neuronsSizes[$i], null));
+                    $this->neurons[$i - 1][] = new Neuron((int)$neuronsSizes[$i - 1], null);
                 }
                 catch(Exception $e) {
-                    file_put_contents("logsKiK2/error.txt", $e, FILE_APPEND);
                     throw new Exception("Something went wrong while creating neurons.");
                 }
             }
-            file_put_contents("logsKiK2/net.txt", "5", FILE_APPEND);
         }
-        file_put_contents("logsKiK2/net.txt", "CONSTRUCTED", FILE_APPEND);
     }
 
     public function save($filename){
         if(empty($filename)) return false;
         if(!preg_match("/.+" . self::FILE_EXTENSION . "/", $filename)) $filename .= self::FILE_EXTENSION;
 
-        $txt = count($this->inputs) . self::LAYERS_SEPARATOR;  // Pierwsza "warstwa" to ilość wejść
+        $txt = $this->inputsSize . self::LAYERS_SEPARATOR;  // Pierwsza "warstwa" to ilość wejść
         for($i = 0; $i < $this->numOfLayers; $i++){
             for($j = 0; $j < count($this->neurons[$i]); $j++){
                 for($k = 0; $k < $this->neurons[$i][$j]->getWeightsCount(); $k++){
-                    file_put_contents("logsKiK2/save.txt", $i . ' ' . $j . ' ' . $k . PHP_EOL, FILE_APPEND);
                     if($this->neurons[$i][$j]->getWeight($k) === false){
                         fclose($file);
                         return false;
@@ -78,14 +68,11 @@ class NeuralNet{
                 $txt .= $this->neurons[$i][$j]->getBias();
                 $txt .= self::NEURONS_SEPARATOR;
             }
-            file_put_contents("logsKiK2/save.txt", PHP_EOL . "AAA", FILE_APPEND);
             $txt .= self::LAYERS_SEPARATOR;
         }
 
-        file_put_contents("logsKiK2/save.txt", PHP_EOL . "7", FILE_APPEND);
         $txt = substr($txt, 0, -1);  // Usuwam separator warstwy (Neuronów zostaje!)
         $file = fopen($filename, "w");
-        file_put_contents("logsKiK2/save.txt", PHP_EOL . "8", FILE_APPEND);
         if($file === false) return false;
         fwrite($file, $txt);
         fclose($file);
@@ -235,7 +222,7 @@ class NeuralNet{
     public function getResult(){
         $arr = [];
         for($i = 0; $i < count($this->neurons[$this->numOfLayers - 1]); $i++)
-            array_push($arr, $this->neurons[$this->numOfLayers - 1][$i]);
+            array_push($arr, $this->neurons[$this->numOfLayers - 1][$i]->getValue());
         return $arr;
     }
     public function getGradientRare(){ return $this->gradientRate; }

@@ -13,15 +13,11 @@ class Neuron{
     public const VALUE_PRECISION = 5;       // Ilość cyfr (razem z cyfrą jedności) wartości (wag i bias'ów) 
 
     public function __construct($arr, $b){  // Tablica wag, bias 
-        file_put_contents("logsKiK2/neuron.txt", print_r($arr, true), FILE_APPEND);
         if($arr === null)
             $this->randomize(1, self::MAX_RAND_WEIGHT, self::MAX_RAND_BIAS, self::VALUE_PRECISION);
         else if(is_numeric($arr)){
-            file_put_contents("logsKiK2/neuron.txt", "A", FILE_APPEND);
-            if($this->randomize((int)$arr, self::MAX_RAND_WEIGHT, self::MAX_RAND_BIAS, self::VALUE_PRECISION) === false){
+            if($this->randomize((int)$arr, self::MAX_RAND_WEIGHT, self::MAX_RAND_BIAS, self::VALUE_PRECISION) === false)
                 throw new Exception("Incorrect weights count.");
-                file_put_contents("logsKiK2/neuron.txt", "B", FILE_APPEND);
-            }
         }
         else{
             if(empty($arr) || count($arr) < 1) 
@@ -41,11 +37,9 @@ class Neuron{
         if($size < 1 || $maxRandWeigth < 0 || $maxRandBias < 0 || $precision <= 0) return false;
 
         $this->weightsCount = (int)$size;
-
         $ratio = pow(10, $precision - 1);
         $maxWeight = $maxRandWeigth * $ratio;
         $maxBias = $maxRandBias * $ratio;
-
         for($i = 0; $i < $this->weightsCount; $i++)
             $this->weights[$i] = rand(-$maxWeight, $maxWeight) / $ratio;
         $this->bias = rand(-$maxBias, $maxBias) / $ratio;
