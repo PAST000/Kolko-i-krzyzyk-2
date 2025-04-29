@@ -94,6 +94,25 @@ class GameServer implements MessageComponentInterface {
         $this->freeIDs[] = $this->playersIDs[$nick];
         unset($this->playersIDs[$nick]);
         unset($this->players[$nick]);
+        $this->pause();
+
+        if((count($this->players) + count($this->bots)) < 1)
+            $this->shutdownTimer = $this->loop->addTimer(10, function () { 
+                if (count($this->players) < 1) die();  // Po odliczeniu czasu sprawdzamy czy ktoś nie dołączył
+            });
+        $this->refresh();
+    }
+
+    public function onError(ConnectionInterface $socket, \Exception $e) { 
+        $nick = array_search($socket, $this->players);
+        if($socket === $this->admin) $this->admin = null;
+        $this->clients->detach($socket);
+        $socket->close(); 
+        if($nick === false) return false;  // Jeśli klient nie jest graczem
+
+        $this->freeIDs[] = $this->playersIDs[$nick];
+        unset($this->playersIDs[$nick]);
+        unset($this->players[$nick]);
 
         $this->pause();
 
@@ -101,11 +120,8 @@ class GameServer implements MessageComponentInterface {
             $this->shutdownTimer = $this->loop->addTimer(10, function () { 
                 if (count($this->players) < 1) die();  // Po odliczeniu czasu sprawdzamy czy ktoś nie dołączył
             });
-
         $this->refresh();
     }
-
-    public function onError(ConnectionInterface $socket, \Exception $e) { $socket->close(); }  // TODO
 
     public function onMessage(ConnectionInterface $socket, $msg) {
         $args = explode(self::MSG_DELIMETER, $msg);
@@ -121,7 +137,12 @@ class GameServer implements MessageComponentInterface {
         else if(!$this->player($socket, $args)) return;
 
         if(!$this->stopRefresh) $this->refresh();
-        else $this->stopRefresh = true;
+        else $this->stopRefresh = false;
+
+        while($this->botTurn() && !$this->paused){
+            file_put_contents("logsKiK2/botTurn.txt", "2", FILE_APPEND);
+            $this->refresh();
+        }
     }
 
     public function checkWin(){
@@ -456,7 +477,7 @@ class GameServer implements MessageComponentInterface {
                 break; 
 
             case "addbot": 
-                return $this->addBot($socket, $args);
+                return $this->addBot($socket, $args[1]);
                 break; 
 
             case "pause": 
@@ -526,8 +547,12 @@ class GameServer implements MessageComponentInterface {
     }
 
     private function refresh(){
-        $txt = "Refresh " . json_encode($this->playersIDs) . ' ' . implode(self::SIZES_DELIMETER, $this->board->getSizes()) . ' ' 
-               . $this->board->implode() . ' ' . $this->board->getTarget() . ' ' . $this->turn;
+        $txt = "Refresh " . 
+                json_encode(array_merge($this->playersIDs, $this->botsIDs)) . ' ' . 
+                implode(self::SIZES_DELIMETER, $this->board->getSizes()) . ' ' .
+                $this->board->implode() . ' ' . 
+                $this->board->getTarget() . ' ' . 
+                $this->turn;
         foreach ($this->clients as $client) 
             $client->send($txt . ' ' . $this->getIDBySocket($client));
     }
@@ -552,7 +577,11 @@ class GameServer implements MessageComponentInterface {
 
     private function unpause(){
         $this->paused = false;
-        foreach ($this->clients as $client) $client->send("Unpaused");
+        foreach ($this->clients as $client) 
+            $client->send("Unpaused");
+        
+        while($this->botTurn() && !$this->paused)
+            $this->refresh();
     }
 
     private function put($socket, $args){
@@ -567,22 +596,29 @@ class GameServer implements MessageComponentInterface {
         }
 
         $this->turn++;
-        $this->turn %= count($this->players);
+        $this->turn %= (count($this->players) + count($this->bots));
         $this->checkWin();
         $this->checkTie();
         return true;
     }
 
-    private function addBot($socket, $args, $filename = null){
+    private function addBot($socket, $nick, $filename = null){
         try{
             $agent = new Agent(self::SIZES_DELIMETER, 
                                $this->board->count(), 
                                self::IF_LEARN);
-            if(!empty($filename)) $agent->loadFromFile($filename);
+            if(!empty($filename)) 
+                $agent->loadFromFile($filename);
 
-            $this->bots[] = $agent;
-            $this->botsIDs[] = array_shift($this->freeIDs);
+            $this->bots[$nick] = $agent;
+            $this->botsIDs[$nick] = array_shift($this->freeIDs);
             $agent->saveToFile("logsKiK2/netSave.txt");
+
+            if((count($this->players) + count($this->bots)) === $this->numOfPlayers){
+                foreach($this->clients as $client) $client->send("Started");
+                $this->started = true;
+                $this->startTime = date("Y-m-d h:i:s");
+            }
         }
         catch(Exception $e){ 
             return false; 
@@ -595,12 +631,16 @@ class GameServer implements MessageComponentInterface {
         if($nick === false) return false;
         $move = $this->bots[$nick]->makeMove($this->board->implode($this->bots[$nick]->getBoardSeparator()), 
                                              $this->board->getTarget(), 
-                                             $this->board::PAWNS[$this->turn]);
+                                             $this->board::PAWNS[$this->turn],
+                                             count($this->players)
+                                            );
+        file_put_contents("logsKiK2/checkTurn.txt", $move . intval($move) . PHP_EOL, FILE_APPEND);
         if($move === false) return false;
-        if(!$this->board->putByID($move, $this->board::PAWNS[$this->turn])) return false;
+        file_put_contents("logsKiK2/checkTurn.txt", $move . ' ' . $this->turn . PHP_EOL, FILE_APPEND);
+        if($this->board->putByID($move, $this->turn) === false) return false;
         
         $this->turn++;
-        $this->turn %= count($this->players);
+        $this->turn %= (count($this->players) + count($this->bots));
         $this->checkWin();
         $this->checkTie();
         return true;

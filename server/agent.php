@@ -11,6 +11,7 @@ class Agent{
     private $gradients = [];
     private $game = [];  // stos tablic: id => [wejście, wyjście, wybrane]
 
+    public const BOARD_SIZE = 64;
     public const LEARNING_RATE = 0.1;
     public const GRADIENT_COUNT_TRESHOLD = 50;  // "Potrzebna" ilość gradientów z której bierzemy średnią i uczymy
     public const DRAW_REWARD = 0.75;
@@ -22,18 +23,17 @@ class Agent{
     public function __construct($separator, $boardCount, $learn = false){
         if(strlen($separator) !== 1) throw new Exception("Separator must be exaclty one char long.");
         if(!is_numeric($boardCount) || (int)$boardCount < 1) throw new Exception("Incorrect board count.");
-        if(!is_numeric($rate) || $rate == 0) throw new Exception("Rate must be a number other than 0.");
-
         $this->boardSeparator = $separator;
         $this->ifLearn = boolval($learn);
 
         // WEJŚCIA: $boardCount na jednego gracza (trzech graczy czyli x3, jeśli dwóch graczy ostatnie to same zera); 
-        // Na końcu: 1,0 jeśli dwóch graczy i 0,1 jeśli trzech; cel (liczba całkowita)
+        // 1,0 jeśli dwóch graczy i 0,1 jeśli trzech; 
+        // 1,0,0 jeśli cel = 2, 0,1,0 jeśli cel = 3, 0,0,1 jeśli cel = 4
         $this->net = new NeuralNet(array_merge(
-                                       array(count(self::PAWNS) * $boardCount + 3), 
+                                       array(count(self::PAWNS) * $boardCount + 5), 
                                        self::hiddenNeuronsCounts, 
                                        array($boardCount)
-                                    ), 
+                                   ), 
                                    self::LEARNING_RATE);
     }
 
@@ -48,19 +48,24 @@ class Agent{
         return $this->net->save($filename);
     }
 
-    public function boardToInput($txt, $target, $self){
-        if(!is_numeric($self) || $self < 0 || $self >= count(self::PAWNS) || !iiset(self::PAWNS($self))) return false;
-        if(empty($txt) || !is_numeric($target) || $target <= 0 ) return false;
+    public function boardToInput($txt, $target, $self, $numOfPlayers){
+        if(empty($txt) || !is_numeric($target) || $target <= 0) return false;
+        $selfID = $self;
+        if(is_numeric($self) && !isset(self::PAWNS[$self])) return false;
+        else{
+            $selfID = array_search($self, self::PAWNS);
+            if($selfID === false) return false;
+        }
 
-        $board = explode($this->getBoardSeparator, strtoupper($txt));
+        $board = explode($this->boardSeparator, strtoupper($txt));
         if(count($board) !== self::BOARD_SIZE) return false;
         $input = [];
         $pawns = self::PAWNS;
 
         // Najpierw "my"
         for($i = 0; $i < count($board); $i++)
-            array_push($input, ($board[$j] === self::PAWNS[$self] ? 1 : 0));
-        $pawns = array_diff($pawns, array(self::PAWNS[$self]));
+            array_push($input, ($board[$j] === self::PAWNS[$selfID] ? 1 : 0));
+        $pawns = array_diff($pawns, array(self::PAWNS[$selfID]));
 
         for($i = 0; $i < count(self::PAWNS) - 1; $i++){
             for($j = 0; $j < count($board); $j++)
@@ -68,21 +73,32 @@ class Agent{
             array_shift($pawns);
         }
 
-        array_push($input, count(self::PAWNS) === 2 ? 1 : 0, count(self::PAWNS) === 2 ? 0 : 1);
-        array_push($input, (int)$target);
+        if($numOfPlayers === 2)
+            array_push($input, 1, 0);
+        else 
+            array_push($input, 0, 1);
+
+        if((int)$target === 2)
+            array_push($input, 1, 0, 0);
+        else if((int)$target === 3)
+            array_push($input, 0, 1, 0);
+        else
+            array_push($input, 0, 0, 1);
+
         return $input;
     }
 
-    public function calc($txt, $target, $self){
-        return $this->calcByInput($this->boardToInput($txt, $target, $self));
+    public function calc($txt, $target, $self, $numOfPlayers){
+        return $this->calcByInput($this->boardToInput($txt, $target, $self, $numOfPlayers));
     }
 
     public function calcByInput($input){
         if(empty($input)) return false;
-        if(!$this->net->calc($inputs)) return false;
+        if(!$this->net->calc($input)) return false;
 
         $oldResult = $this->result;
         $this->result = $this->net->getResult();
+
         if(count($this->result) !== self::BOARD_SIZE){
             $this->result = $oldResult;
             return false;
@@ -94,11 +110,11 @@ class Agent{
         if(empty($result) || count($result) !== self::BOARD_SIZE) return false;
         if($txt === null)
            return array_keys($result, max($result))[0];
-        
-        $board = explode($this->getBoardSeparator, strtoupper($txt));
-        if(count($board) !== self::BOARD_SIZE) return false;
 
+        $board = explode($this->boardSeparator, strtoupper($txt));
+        if(count($board) !== self::BOARD_SIZE) return false;
         $id = false;
+
         for($i = 0; $i < self::BOARD_SIZE; $i++){
             if(!empty($board[$i])) continue;
             if($id === false || $result[$id] < $result[$i]) $id = $i;
@@ -149,12 +165,13 @@ class Agent{
         return $exp;
     }
 
-    public function makeMove($txt, $target, $self){
-        $inputs = $this->boardToInput($txt, $target, $self);
+    public function makeMove($txt, $target, $self, $numOfPlayers){
+        $inputs = $this->boardToInput($txt, $target, $self, $numOfPlayers);
         $result = $this->calcByInput($inputs);
         $move = $this->getMaxPossible($txt, $result);
+
         if(empty($inputs) || empty($result) || empty($move)) return false;
-        array_push($game, array($inputs, $result, $move));
+        array_push($this->game, array($inputs, $result, $move));
         return $move;
     }
 
