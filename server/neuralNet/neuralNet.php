@@ -7,7 +7,6 @@ class NeuralNet{
     private $inputs = [];
     private $neurons = [];  // [warstwa, neuron]
     private $expected = [];
-    private $cost = 0;
     private $neuronsDerivatives = [];
     private $gradient = [];
     private $gradientRate = 0;
@@ -31,6 +30,7 @@ class NeuralNet{
         $this->numOfLayers = count($neuronsSizes) - 1;
         $this->inputsSize = (int)$neuronsSizes[0];
         $this->gradientRate = (float)$rate;
+        $this->weightsAndBiasesCount = 0;
 
         for($i = 1; $i <= $this->numOfLayers; $i++){
             $this->neurons[] = array();
@@ -41,6 +41,7 @@ class NeuralNet{
             for($j = 0; $j < (int)$neuronsSizes[$i]; $j++){
                 try{
                     $this->neurons[$i - 1][] = new Neuron((int)$neuronsSizes[$i - 1], null);
+                    $this->weightsAndBiasesCount += (int)$neuronsSizes[$i - 1] + 1;
                 }
                 catch(Exception $e) {
                     throw new Exception("Something went wrong while creating neurons.");
@@ -57,10 +58,8 @@ class NeuralNet{
         for($i = 0; $i < $this->numOfLayers; $i++){
             for($j = 0; $j < count($this->neurons[$i]); $j++){
                 for($k = 0; $k < $this->neurons[$i][$j]->getWeightsCount(); $k++){
-                    if($this->neurons[$i][$j]->getWeight($k) === false){
-                        fclose($file);
+                    if($this->neurons[$i][$j]->getWeight($k) === false)
                         return false;
-                    }
                     $txt .= $this->neurons[$i][$j]->getWeight($k);
                     $txt .= self::VALUES_SEPARATOR;
                 }
@@ -70,12 +69,8 @@ class NeuralNet{
             }
             $txt .= self::LAYERS_SEPARATOR;
         }
-
-        $txt = substr($txt, 0, -1);  // Usuwam separator warstwy (Neuronów zostaje!)
-        $file = fopen($filename, "w");
-        if($file === false) return false;
-        fwrite($file, $txt);
-        fclose($file);
+        if(!file_put_contents(__DIR__ . DIRECTORY_SEPARATOR . $filename, substr($txt, 0, -1)))  // Usuwam separator warstwy (Neuronów zostaje!)
+            return false;
         return true;
     }
 
@@ -83,10 +78,13 @@ class NeuralNet{
         if(empty($filename)) return false;
         if(!preg_match("/.+" . self::FILE_EXTENSION . "/", $filename)) $filename .= self::FILE_EXTENSION;
         
-        $file = fopen($filename, "r");
-        if($file === false) return false;
-        $txt = fread($file, filesize($filename));
-        fclose($file);
+
+        $txt = file_get_contents($filename);
+        if($txt === false){
+            $txt = file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . $filename);
+            if($txt === false) return false;
+        }
+        file_put_contents("logsKiK2/readBot.txt", "NI" . $txt, FILE_APPEND);
 
         $layers = explode(self::LAYERS_SEPARATOR, $txt);
         if(count($layers) < 2) return false;  // Poprawny rozmiar to: ilość warstw + 1 (inputs)
@@ -142,18 +140,17 @@ class NeuralNet{
 
             for($j = 0; $j < count($this->neurons[$i]); $j++){
                 $this->neurons[$i][$j]->calc($currInps);
-                if($i < $inputsSize - 1) array_push($nextInps, $this->neurons[$i][$j]->getValue());
+                array_push($nextInps, $this->neurons[$i][$j]->getValue());
             }
         }
-        return $this->getResult();
+        return $nextInps;
     }
 
     public function calcDerivatives($exp){
-        if(!setExpected($exp)) return false;
+        if(!$this->setExpected($exp)) return false;
 
         for($i = 0; $i < count($this->neurons[$this->numOfLayers - 1]); $i++)
-            $this->neuronsDerivatives[$numOfLayers - 1][$i] = 2*abs($this->neurons[$numOfLayers - 1][$i]->getValue() - $this->expected[$i]);
-
+            $this->neuronsDerivatives[$this->numOfLayers - 1][$i] = 2*($this->neurons[$this->numOfLayers - 1][$i]->getValue() - $this->expected[$i]);
         for($i = $this->numOfLayers - 2; $i >= 0; $i--)
             for($j = 0; $j < count($this->neurons[$i]); $j++){
                 $this->neuronsDerivatives[$i][$j] = 0;
@@ -175,7 +172,7 @@ class NeuralNet{
             for($j = 0; $j < count($this->neurons[$i]); $j++){
                 $sigmDeriv = sigmoidDerivative($this->neurons[$i][$j]->getPreSigmoid());
 
-                for($k = 0; $k < count($this->neurons[$i][$j]->getWeights()); $k++)
+                for($k = 0; $k < $this->neurons[$i][$j]->getWeightsCount(); $k++)
                     array_push($this->gradient, (-1) * ($i === 0 ? $inps[$k] : $this->neurons[$i - 1][$k]->getValue()) * $sigmDeriv);
                 array_push($this->gradient, (-1) * $sigmDeriv);
             }
@@ -208,7 +205,9 @@ class NeuralNet{
 
     public function setExpected($new){
         if(count($new) < count($this->neurons[$this->numOfLayers - 1])) return false;
-        for($i = 0; $i < count($new); $i++) if(!is_numeric($new[$i])) return false;
+        for($i = 0; $i < count($new); $i++) 
+            if(!is_numeric($new[$i])) return false;
+
         $this->expected = array_slice($new, 0, count($this->neurons[$this->numOfLayers - 1]));
         return true;
     }
@@ -225,7 +224,8 @@ class NeuralNet{
             array_push($arr, $this->neurons[$this->numOfLayers - 1][$i]->getValue());
         return $arr;
     }
-    public function getGradientRare(){ return $this->gradientRate; }
+    public function getGradientRate(){ return $this->gradientRate; }
     public function getGradient(){ return $this->gradient; }
+    public function getNeurons(){ return $this->neurons; }
 }
 ?>

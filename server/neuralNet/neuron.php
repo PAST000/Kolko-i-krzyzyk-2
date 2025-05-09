@@ -26,7 +26,7 @@ class Neuron{
                 if(!is_numeric($arr[$i])) 
                     throw new Exception("Weight nr. " . $i . " is not a number.");
 
-            $this->weights = (int)$arr;
+            $this->weights = $arr;
             $this->weightsCount = count($this->weights);
             $this->bias = $b;
         }
@@ -41,16 +41,20 @@ class Neuron{
         $maxWeight = $maxRandWeigth * $ratio;
         $maxBias = $maxRandBias * $ratio;
         for($i = 0; $i < $this->weightsCount; $i++)
-            $this->weights[$i] = rand(-$maxWeight, $maxWeight) / $ratio;
-        $this->bias = rand(-$maxBias, $maxBias) / $ratio;
+            $this->weights[$i] = mt_rand(-$maxWeight, $maxWeight) / $ratio;
+        $this->bias = mt_rand(-$maxBias, $maxBias) / $ratio;
         return true;
     }
 
     public function calc($inputs){
-        if(count($inputs) < $this->$weightsCount) return false;
-        
-        for($i = 0; $i < $this->$weightsCount; $i++){
-            if(!is_numeric($inputs[$i])) return false;
+        if(count($inputs) < $this->weightsCount) return false;
+        $this->preSigmoid = 0;
+
+        for($i = 0; $i < $this->weightsCount; $i++){
+            if(!is_numeric($inputs[$i])){
+                $this->value = 0;
+                return false;
+            }
             $this->preSigmoid += $this->weights[$i] * $inputs[$i];
         }
         $this->preSigmoid -= $this->bias;
@@ -59,14 +63,14 @@ class Neuron{
     } 
 
     public function setWeight($i, $value){
-        if($i < 0 || $i >= $this->$weightsCount || !is_numeric($value)) return false;
+        if($i < 0 || $i >= $this->weightsCount || !is_numeric($value)) return false;
         $this->weights[$i] = $value;
         return true;
     }
 
     public function setWeights($values){
-        if(count($values) < $this->$weightsCount) return false;
-        for($i = 0; $i < $this->$weightsCount; $i++){
+        if(count($values) < $this->weightsCount) return false;
+        for($i = 0; $i < $this->weightsCount; $i++){
             if(!is_numeric($values[$i])) return false;
             $this->weights[$i] = $values[$i];
         }
@@ -80,7 +84,7 @@ class Neuron{
     }
 
     public function incrementWeight($i, $value){
-        if($i < 0 || $i >= $this->$weightsCount || !is_numeric($value)) return false;
+        if($i < 0 || $i >= $this->weightsCount || !is_numeric($value)) return false;
         $this->weights[$i] += $value;
         return true;
     } 
