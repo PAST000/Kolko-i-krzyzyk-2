@@ -12,13 +12,14 @@ class Agent{
     private $game = [];  // stos tablic: id => [wejście, wyjście, wybrane]
 
     public const BOARD_SIZE = 64;
-    public const LEARNING_RATE = 0.1;
+    public const LEARNING_RATE = 0.05;
     public const GRADIENT_COUNT_TRESHOLD = 50;  // "Potrzebna" ilość gradientów z której bierzemy średnią i uczymy
     public const DRAW_REWARD = 0.75;
     public const FIRST_MOVE_WEIGHT = 0.1;
     public const LAST_MOVE_WEIGHT = 2;
     public const PAWNS = ['O', 'X', 'P'];
-    public const hiddenNeuronsCounts = [20, 20];
+    public const HIDDEN_NEURON_COUNTS = [20, 20];
+    public const SAVE_AFTER_LEARN = TRUE;
 
     public function __construct($separator, $boardCount, $learn = false){
         if(strlen($separator) !== 1) throw new Exception("Separator must be exaclty one char long.");
@@ -31,7 +32,7 @@ class Agent{
         // 1,0,0 jeśli cel = 2, 0,1,0 jeśli cel = 3, 0,0,1 jeśli cel = 4
         $this->net = new NeuralNet(array_merge(
                                        array(count(self::PAWNS) * $boardCount + 5), 
-                                       self::hiddenNeuronsCounts, 
+                                       self::HIDDEN_NEURON_COUNTS, 
                                        array($boardCount)
                                    ), 
                                    self::LEARNING_RATE);
@@ -43,7 +44,7 @@ class Agent{
         return $this->net->read($filename);
     }
 
-    public function saveToFile($filename){
+    public function save($filename){
         if(empty($filename)) return false;
         return $this->net->save($filename);
     }
@@ -64,7 +65,7 @@ class Agent{
 
         // Najpierw "my"
         for($i = 0; $i < count($board); $i++)
-            array_push($input, ($board[$j] === self::PAWNS[$selfID] ? 1 : 0));
+            array_push($input, ($board[$i] === self::PAWNS[$selfID] ? 1 : 0));
         $pawns = array_diff($pawns, array(self::PAWNS[$selfID]));
 
         for($i = 0; $i < count(self::PAWNS) - 1; $i++){
@@ -165,42 +166,43 @@ class Agent{
         return $exp;
     }
 
-    public function makeMove($txt, $target, $self, $numOfPlayers){
+    public function makeMove($txt, $self, $target, $numOfPlayers){
         $inputs = $this->boardToInput($txt, $target, $self, $numOfPlayers);
         $result = $this->calcByInput($inputs);
         $move = $this->getMaxPossible($txt, $result);
 
-        if(empty($inputs) || empty($result) || empty($move)) return false;
+        if(empty($inputs) || empty($result) || $move === false) return false;
         array_push($this->game, array($inputs, $result, $move));
         return $move;
     }
 
     public function gameResult($res){  // Jeśli < 0 przegrana, jeśli == 0 remis, jeśli > 0 wygrana
-        $movesCount = 2;
-        if($this->ifLearn){
-            $movesCount = count($this->game) < 2 ? 2 : count($this->game);
+        if($this->ifLearn)
             for($i = 0; $i < count($this->game); $i++){
-                $gradient = $this->net->calcGradient($this->game[0], $this->calcExpected($this->game[$i][1], $this->game[$i][2], $res));
+                $gradient = $this->net->calcGradient($this->game[$i][0], $this->calcExpected($this->game[$i][1], $this->game[$i][2], $res));
                 if($gradient !== false)
                     array_push($this->gradients, $gradient);
             }
-        }
-        $this->game = [];
 
-        if($this->learn &&  count($this->gradients) >= self::GRADIENT_COUNT_THRESHOLD){
-            $avg = $this->getWeightesGradient(self::GRADIENT_COUNT_THRESHOLD, self::FIRST_MOVE_WEIGHT, 
+        if($this->ifLearn &&  count($this->gradients) >= self::GRADIENT_COUNT_TRESHOLD){
+            $movesCount = 2;
+            $movesCount = count($this->game) < 2 ? 2 : count($this->game);
+            $avg = $this->getWeightedGradient(self::GRADIENT_COUNT_TRESHOLD, 
+                                              self::FIRST_MOVE_WEIGHT, 
                                               (self::LAST_MOVE_WEIGHT - self::FIRST_MOVE_WEIGHT) / ($movesCount - 1));
             if($avg === false) return false;
-            $this->gradients = array_slice($this->gradients, self::GRADIENT_COUNT_THRESHOLD);
-            return $this->net->applyGradient($avg);
+            $this->gradients = array_slice($this->gradients, self::GRADIENT_COUNT_TRESHOLD);
+            if(!$this->net->applyGradient($avg)) return false;
+            else if(self::SAVE_AFTER_LEARN) $this->save($this->outputFile);
         }
+        $this->game = [];
         return true;
     }
     
-    public function setLearn($val){ $this->$ifLearn = boolval($val); }
+    public function setLearn($val){ $this->ifLearn = boolval($val); }
     public function setOutputFile($filename){
         if(empty($filename)) return false;
-        $this->outputFIle = $filename;
+        $this->outputFile = $filename;
         return true;
     }
 

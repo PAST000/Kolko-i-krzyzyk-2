@@ -11,8 +11,8 @@ class RandomBot{
     public function makeMove($txt, $self){
         $selfPawn = $self;
         if(is_numeric($self)){
-            if($self < 0 || $self >= count(self::PAWNS) || !is_int($self)) return false;
-            $selfPawn = self::PAWNS[$self];
+            if($self < 0 || $self >= count(self::PAWNS) || empty(self::PAWNS[(int)$self])) return false;
+            $selfPawn = self::PAWNS[(int)$self];
         }
         else
             if(array_search($self, self::PAWNS) === false) return false;
@@ -28,6 +28,8 @@ class RandomBot{
         if(count($availableFields) === 0) return false;
         return $availableFields[rand(0, count($availableFields) - 1)];
     }
+
+    public function gameResult($res){}
 
     public function setBoardSeparator($separator){ 
         if(strlen($separator) !== 1) return false;

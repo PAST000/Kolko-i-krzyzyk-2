@@ -9,9 +9,7 @@ require 'vendor/autoload.php';
 $address = "0.0.0.0";
 $port = $argv[1] ?? "3310";
 if(!is_numeric($port) || $port <= 0 || $port > 65535) $port = "3310";
-
 const argsDelimeter = ' ';
-const commandTypes = [ "create", "ping", "reping", "new" ];
 
 class Server implements MessageComponentInterface {
     protected $clients;
@@ -47,13 +45,13 @@ class Server implements MessageComponentInterface {
         if(empty($args) || empty($args[0])) return false;
 
         switch(strtolower($args[0])){
-            case commandTypes[0]:  // Create
+            case "create": 
                 $this->createGame($socket, $args);
                 break;
-            case commandTypes[1]:  // Ping
-                $socket->send("Reping");
+            case "ping":
+                $socket->send("Pong");
                 break;
-            case commandTypes[2]:  // Reping
+            case "pong":
                 break;
         }
     }
