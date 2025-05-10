@@ -8,16 +8,8 @@ class Board{
     private $sizesMult = 1; // Przemnożone rozmiary
     private $target = 3;    // Zwycięzka ilość w jednej linii
     private $dirs = [];
-    public const PAWNS = ['O', 'X', 'P']; // Kula, krzyżyk, piramida
-    public const SIZES_SEPARATOR = ',';
 
-    function initDirs(){
-        $dir = new Direction($this->dims);
-        for($i = 0; $i < pow(3, $this->dims) - 1; $i++){
-            $this->dirs[$i] = clone $dir;
-            $dir->increment();
-        }
-    }
+    public const PAWNS = ['O', 'X', 'P']; // Kula, krzyżyk, piramida
 
     function __construct($sizesArr, $trg){
         if(count($sizesArr) < 2) throw new Exception("Liczba wymiarów musi być większa od 1");
@@ -38,18 +30,31 @@ class Board{
 
     function __destruct(){}
 
+    function initDirs(){
+        $dir = new Direction($this->dims);
+        for($i = 0; $i < pow(3, $this->dims) - 1; $i++){
+            $this->dirs[$i] = clone $dir;
+            $dir->increment();
+        }
+    }
+
     function put($v, $pawn){ 
         $id = $this->arrToId($v);
         if($id === false) return false; 
         if($id < 0 || $id >= count($this->board)) return false;
         if($pawn < 0 || $pawn >= count(self::PAWNS)) return false;
         if($this->board[$id] !== null) return false;
-
         $this->board[$id] = self::PAWNS[$pawn];
         return true;
     }
+    function putByID($id, $pawn){
+        return $this->put($this->idToArr($id), $pawn);
+    }
 
-    function clear($id){
+    function clear($v){ 
+        return $this->clearByID($this->idToArr($v)); 
+    }
+    function clearByID($id){
         if($id < 0 || $id >= count($this->board)) return false;
         $this->board[$id] = null;
         return true;
@@ -102,7 +107,7 @@ class Board{
         return true;
     }
 
-    function translate($id, $v, $k = 1){
+    function translate($id, $v, $k = 1){   // id pola, wektor przesunięcia, współczynnik wektora
         if($id < 0 || $id >= count($this->board)) return false;
         if($v->getSize() < $this->dims) return false;
 
@@ -137,9 +142,9 @@ class Board{
         return $id;
     }
 
-    function getPlayerByField($fieldID){
-        if($this->board[$fieldID] === null) return false;
-        return array_search($this->board[$fieldID], self::PAWNS);
+    function getPlayerByField($fieldId){
+        if($this->board[$fieldId] === null) return false;
+        return array_search($this->board[$fieldId], self::PAWNS);
     }
 
     function countEmpty(){
@@ -154,7 +159,8 @@ class Board{
     function getDims(){ return $this->dims; }
     function getDirections(){ return $this->dirs; }
     function getSizes(){ return $this->sizes; }
-    function serializeSizes(){ return implode(self::SIZES_SEPARATOR, $this->sizes); }
+    function count(){ return $this->sizesMult; }
+    function serializeSizes($separator = ','){ return implode($separator, $this->sizes); }
     function implode($separator = ','){ return implode($separator, $this->board); }
 }
 ?>

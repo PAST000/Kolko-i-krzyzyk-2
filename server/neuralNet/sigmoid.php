@@ -1,4 +1,9 @@
 <?php
-function sigmoid($x){ return 1/(1 + pow(M_E, -$x)); }
-function sigmoidDerivative($x){ return pow(M_E, $x)/pow(pow(M_E, $x) + 1,2); }
+function sigmoid($x){ 
+    return 1/(1 + pow(M_E, -$x)); 
+}
+function sigmoidDerivative($x){
+    $s = sigmoid($x);
+    return $s * (1 - $s);
+}
 ?>

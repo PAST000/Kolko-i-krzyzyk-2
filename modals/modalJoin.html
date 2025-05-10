@@ -1,5 +1,16 @@
 <!DOCTYPE html>
 <style>
+    html{
+        margin: 0;
+        height: 100%;
+    }
+    body{
+        margin: 0;
+        display: flex;
+        align-items: center;
+        height: 100%;
+    }
+
     #modalWrapper{
         border: 5px solid black;
         border-radius: 10px;
@@ -8,8 +19,8 @@
         width: 25%;
         background-color: rgb(101, 208, 250);
         margin: auto;
-        margin-top: 30vh;
     }
+
     #modalWrapper > input[type="text"]{
         width: 100%;
         box-sizing: border-box;
@@ -81,19 +92,28 @@
 </html>
 
 <script>
-    document.getElementById("close").onclick = function() { window.parent.postMessage("closeModal", "*"); };
+    document.getElementById("close").onclick = function() { 
+        window.parent.postMessage("closeModal", "*"); 
+    };
 
     document.getElementById("join").onclick = function() {
         const prt = parseInt(document.getElementById("port").value, 10);
-        const name = document.getElementById("nick").value;
+        const nickname = document.getElementById("nick").value;
+        const pattern = new RegExp(/\s/);
 
-        if(prt === NaN || prt < 0 || prt > 65535 || name === "") {
+        if(isNaN(prt) || prt < 0 || prt > 65535) {
             document.getElementById("error").style.display = "block";
+            document.getElementById("error").innerHTML = "Wprowadź poprawny port";
+            return;
+        }
+        if(!nickname || pattern.test(nickname)){
+            document.getElementById("error").style.display = "block";
+            document.getElementById("error").innerHTML = "Wprowadź poprawny nick";
             return;
         }
 
         sessionStorage.clear();
-        sessionStorage.setItem("joinData", JSON.stringify({ port : prt, nick : name }));
+        sessionStorage.setItem("joinData", JSON.stringify({ port : prt, nick : nickname }));
         window.parent.postMessage("closeModal", "*"); 
         window.parent.location.href = "../game";
     };

@@ -49,23 +49,23 @@ ids = ['O', 'X', 'P']  // Kula, krzyżyk, piramida
 Typy błędów: 
     0x Błędy ogólne
 	    00 Nie masz uprawnień (Nie jesteś graczem)
+        01 Nie masz uprawnień (Nie jesteś adminem)
 
     1x Błędy z przesłaną komendą
 	    10 Niepoprawny typ komendy
 	    11 Zbyt mało argumentów
 	    12 Gra jest zapauzowana
 
-    2x Błąd zwrócony z planszy (+Tworzenie planszy)
+    2x Błąd zwrócony z planszy
 	    20 Błąd przy tworzeniu planszy   // Opis błędu jest 2. argumentem
-	    21 Niepoprawna ilość graczy
-	    22 Nie udało się położyć pionka  // Prawie na pewno złe koordynaty lub zajęte pole, z racji na istnienie Error 23
-	    23 Nie twoja tura
+	    21 Nie udało się położyć pionka  // Prawie na pewno złe koordynaty lub zajęte pole, z racji na istnienie Error 23
+	    22 Nie twoja tura
 
-    3x Błąd przy dołączaniu do gry lub dodawaniu bota
+    3x Błąd przy dołączaniu do gry, dodawaniu bota lub SetNick
 	    30 Gra jest pełna
 	    31 Nie podano nicku lub błędny nick
 	    32 Podano błędny port
-	    33 Nick jest zajęty  
+	    33 Nick jest zajęty   
 	    34 Już dołączyłeś
 	
     4x Błąd przy tworzeniu gry
@@ -78,7 +78,7 @@ Typy błędów:
 
     8x Inne błędy
 	    80 Nie znaleziono starego nicku (SetNick u admina)
-	    81 Nie poprawne ID (SetTurn)
+	    81 Nie poprawne ID (SetTurn lub SetNick)
 
     9x Błędy administratorskie
 	    90 Nie istnieje taki gracz
