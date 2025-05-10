@@ -29,7 +29,8 @@ class GameServer implements MessageComponentInterface {
     protected $turn = 0;
     protected $paused = false;
     protected $stopRefresh = false;  // Jeśli funkcja interpretująca ma nie zwracać false (np przy ping), ale chcemy zatrzymać refresh
-    protected $resetTime = 0.5;        // Czas od zakończenia gry do automatycznego ponownego startu (w senkundach)
+    protected $resetTime = 0.5;      // Czas od zakończenia gry do automatycznego ponownego startu (w senkundach)
+    protected $randomReset = false;  // Czy losować GAME_MODE w resetGame()
 
     protected $loop;
     protected $shutdownTimer = null;
@@ -44,8 +45,9 @@ class GameServer implements MessageComponentInterface {
     const MAX_NUM_OF_PLAYERS = 3;
     const MIN_RESET_TIME = 0.5;
     const MAX_RESET_TIME = 30;
+    const GAME_MODES = [[2,3], [2,4], [3,3], [3,4]]; // Ilość graczy, target
 
-    public function __construct($mainPort, $prt, $maxPlayers, $sizes, $target, $lp) {
+    public function __construct($mainPort, $prt, $maxPlayers, $sizes, $target, $lp, $ifRand = false) {
         if($mainPort < 0 || $mainPort > 65535 || $mainPort === $prt) die("Podano nie poprawny port głównego serwera.");
         if($prt < 49152 || $prt > 65535) die("Podano nie poprawny port gry.");
         if($maxPlayers < 2 || $maxPlayers > self::MAX_NUM_OF_PLAYERS) die("Podano nie poprawną ilość graczy.");
@@ -61,8 +63,10 @@ class GameServer implements MessageComponentInterface {
         $this->startTime = date("Y-m-d h:i:s");
 
         $this->freeIDs = [];
-        for($i = 0; $i < $this->numOfPlayers; $i++) $this->freeIDs[] = $i;
-        
+        for($i = 0; $i < $this->numOfPlayers; $i++) 
+            $this->freeIDs[] = $i;
+        $this->randomReset = $ifRand;
+
         $this->conn = new mysqli("localhost", "root", "", "tictactoe2");
         if ($this->conn->connect_error) 
             die("Connection failed: " . $this->conn->connect_error);
@@ -195,29 +199,39 @@ class GameServer implements MessageComponentInterface {
     }
 
     public function resetGame($numOfPl, $sizes, $target, $socket = null){
-        if(empty($numOfPl) || empty($sizes) || empty($target) || $target < 0){
-            if($socket !== null) $socket->send("Error 11");
-            return false;
+        if(!self::RANDOM_RESET){
+            if(empty($numOfPl) || empty($target) || $target < 0){
+                if($socket !== null) $socket->send("Error 11");
+                return false;
+            }
+            if($numOfPl < 2 || $numOfPl > self::MAX_NUM_OF_PLAYERS){
+                if($socket !== null) $socket->send("Error 43");
+                return false;
+            }
+            if($target < 0){
+                if($socket !== null) $socket->send("Error 45");
+                return false;
+            }
         }
-        if($numOfPl < 2 || $numOfPl > self::MAX_NUM_OF_PLAYERS){
-            if($socket !== null) $socket->send("Error 43");
-            return false;
-        }
-        if(empty(explode(self::SIZES_DELIMETER, $sizes))){
+        if(empty($sizes) || empty(explode(self::SIZES_DELIMETER, $sizes))){
             if($socket !== null) $socket->send("Error 44");
             return false;
         }
-        if($target < 0){
-            if($socket !== null) $socket->send("Error 45");
-            return false;
-        }
-
+        
         try{
-            $this->numOfPlayers = (int)$numOfPl;
-            $this->board = new Board(explode(self::SIZES_DELIMETER, $sizes), $target);
-            $this->freeIDs = [];
-            for($i = 0; $i < $this->numOfPlayers; $i++) $this->freeIDs[] = $i; 
+            if(self::RANDOM_RESET){
+                $mode = self::GAME_MODES[mt_rand(0, count(self::GAME_MODES) - 1)];
+                $this->numOfPlayers = $mode[0];
+                $this->board = new Board(explode(self::SIZES_DELIMETER, $sizes), $mode[1]);
+            }
+            else{
+                $this->numOfPlayers = (int)$numOfPl;
+                $this->board = new Board(explode(self::SIZES_DELIMETER, $sizes), $target);
+            }
 
+            $this->freeIDs = [];
+            for($i = 0; $i < $this->numOfPlayers; $i++) 
+                $this->freeIDs[] = $i; 
             $usedIDs = [];
             foreach(array_merge($this->playersIDs, $this->botsIDs) as $nick => $id)
                 if($id < $this->numOfPlayers) 
@@ -761,7 +775,8 @@ $loop = Factory::create();
 $server = new Ratchet\Server\IoServer(
     new Ratchet\Http\HttpServer(new Ratchet\WebSocket\WsServer(new GameServer($argv[1], $argv[2], $argv[3], (string)$argv[4], $argv[5], $loop))),
     new React\Socket\SocketServer("0.0.0.0:" . $argv[2]),
-    $loop
+    $loop,
+    isset($argv[6]) && !empty($argv[6])
 );
 $loop->run();
 ?>
