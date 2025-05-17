@@ -19,6 +19,7 @@
         width: 25%;
         background-color: rgb(101, 208, 250);
         margin: auto;
+        font-size: 130%;
     }
 
     #modalWrapper > input[type="text"]{
@@ -54,15 +55,76 @@
     }
 
     #playersInfo{
-        color: white;
+        color: dimgrey;
+        text-align: center;
+        margin-bottom: 5px;
+        border-radius: 5px;
     }
 
     .playerWrapper{
         position: relative;
+        margin-bottom: 5px;
     }
 
     .playerWrapper > p{
         margin: 0 auto;
+        display: inline;
+    }
+
+    .kick{
+        background-image: url(../resources/kick.svg);
+        background-repeat: no-repeat;
+        background-size: 100% 100%;
+        width: 24px;
+        height: 24px;
+        float: right;
+    }
+
+    .kick::after{
+        clear: both;
+    }
+
+    #parametersContainer{
+        margin-top: 5px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    #stateContainer{
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        margin-top: 7px;
+    }
+
+    .stateButton{
+        position: relative;
+        border: 0;
+        border-radius: 5px;
+        margin: 6px;
+        padding: 6px 8px;
+        color: white;
+        font-weight: 600;
+        font-size: 105%;
+    }
+
+    .stateButton:hover{
+        top: -3px;
+        left: -3px;
+        box-shadow: 4px 4px 2px grey;
+    }
+
+    #pause{
+        background-color: orange;
+    }
+
+    #unpause{
+        background-color: green;
+    }
+
+    #drop{
+        background-color: rgb(202, 0, 0);
     }
 </style>
 
@@ -78,9 +140,34 @@
         <legend>Gracze</legend>
         <div id="playersContainer"></div>
     </fieldset>
-    <div class="inputWrapper">
+
+    <div id="addBotWrapper">
         <input type="text" name="botNick" id="botNick" placeholder="Pseudonim bota">
+        <input type="checkbox" name="randBot" id="randBot">
+        <label for="randBot">Bot losujący</label><br>
         <button id="addBot">Dodaj bota</button>
+    </div>
+
+    <fieldset id="parametersContainer">
+        <div>
+            <label for="turnInput">Tura: </label>
+            <input type="number" name="turnInput" id="turnInput" placeholder="Zmień turę">
+        </div>
+        <div>
+            <label for="turnInput">Opóźnienie nowej gry: </label>
+            <input type="number" name="delayInput" id="delayInput" step="0.1" placeholder="W sekundach">
+        </div>
+        <div>
+            <label for="turnInput">Dopełniaj grę botami losującymi: </label>
+            <input type="checkbox" name="fullfilInput" id="fullfilInput">
+        </div>
+        <button id="apply">Ustaw</button>
+    </fieldset>
+
+    <div id="stateContainer">
+        <button class="stateButton" id="pause">Pauza</button>
+        <button class="stateButton" id="unpause">Wznów</button>
+        <button class="stateButton" id="drop">Koniec</button>
     </div>
 </section>
 </html>
@@ -104,10 +191,14 @@
                 const wrapper = document.createElement("div");
                 const par = document.createElement("p");
                 const txt = document.createTextNode("[" + adminData.players[i][0] + "] " + adminData.players[i][1]);
+                const button = document.createElement("button");
+
+                par.appendChild(txt);
+                button.classList.add("kick");
 
                 wrapper.classList.add("playerWrapper");
-                par.appendChild(txt);
                 wrapper.appendChild(par);
+                wrapper.appendChild(button);
                 childrenArray.push(wrapper);
             }
             document.getElementById("playersContainer").replaceChildren(...childrenArray);
