@@ -80,7 +80,7 @@ class Server implements MessageComponentInterface {
             $prt = $this->gamePort++;
         }
 
-        $process = new Process([PHP_BINARY, __DIR__ . "/game.php", $this->port , $prt, $args[1], (string)$args[2], $args[3]]);
+        $process = new Process([PHP_BINARY, __DIR__ . DIRECTORY_SEPARATOR . "game.php", $this->port , $prt, $args[1], (string)$args[2], $args[3], $args[4]]);
         $process->start();
         $this->games[$prt] = $process;
             
