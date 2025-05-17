@@ -152,6 +152,7 @@ iframe{
     display: flex;
     flex-direction: column;
     position: relative;
+    align-items: center;
 }
 
 #paused{ 
@@ -159,8 +160,8 @@ iframe{
 }
 
 #info > p{
-    font-size: large;
-    margin: 8px;
+    font-size: medium;
+    margin: 6px;
 }
 
 #send{
@@ -170,7 +171,8 @@ iframe{
 }
 
 #playersInfo{
-    margin: 0px 15px;
+    width: 80%;
+    box-sizing: border-box;
 }
 
 .playerWrapper{
@@ -181,14 +183,16 @@ iframe{
     margin: 0 auto;
 }
 
-.kickButton{
-    border: 0px;
-    background-color: transparent;
-    position: absolute;
-    top: 0px;
-    right: 0px;
-    height: 100%;
-    content: url("../resources/kick.svg");
+#adminButton{
+    display: none;
+    color: white;
+    font-size: 120%;
+    font-weight: bold;
+    border: none;
+    background-color: mediumblue;
+    padding: 5px;
+    width: fit-content;
+    box-shadow: 4px 4px dimgray;
 }
 
 #error{
