@@ -84,7 +84,6 @@ class NeuralNet{
             $txt = file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . $filename);
             if($txt === false) return false;
         }
-        file_put_contents("logsKiK2/readBot.txt", "NI" . $txt, FILE_APPEND);
 
         $layers = explode(self::LAYERS_SEPARATOR, $txt);
         if(count($layers) < 2) return false;  // Poprawny rozmiar to: ilość warstw + 1 (inputs)
