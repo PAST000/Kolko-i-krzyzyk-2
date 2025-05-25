@@ -1,20 +1,20 @@
 Do serwera:
     -Create numOfPlayers sizes[] target  // "Zwraca" port
-    -Ping/Reping
+    -Ping/Pong
 
 Z serwera:
     -Error type  // Opcjonalnie opis słowny
     -Port port   // "Zwrot" z Create
-    -Ping/Reping
+    -Ping/Pong
 
 Do gry (użytkownik):
     -Put cords[]
     -Join nick
     -SetNick nick
-    -Ping/Reping
+    -Ping/Pong
 
 Do gry (admin):
-    -Create numOfPlayers sizes[] target 
+    -Create numOfPlayers sizes[] target ifRand  // Jeżeli ifRand to losuje tryb gry przy resecie, puste jeśli nie
     -Drop    // Koniec gry
     -Clear position[]
     -ClearPlayer id
@@ -24,8 +24,11 @@ Do gry (admin):
     -SetNick nick id  // Jeśli brak 2. argumentu ustaw sobie
     -Join nick
     -AddBot nick
+    -AddRandom nick   // Dodaje bota grającego losowo
+    -SetDelay delay   // Ustawienie opóźnienia nowej gry
+    -SetRandFilling val
     -Pause/Unpause 
-    -Ping/Reping
+    -Ping/Pong
  
 Z gry do użytkownika:
     -Error   type txt
@@ -37,7 +40,7 @@ Z gry do użytkownika:
     -Kicked
     -Started
     -Paused/Unpaused 
-    -Ping/Reping
+    -Ping/Pong
 
 Z gry do admina:  (+ Z gry do użytkownika) 
     -YouAreAdmin   // Tylko przy dołączeniu lub gdy został wybrany nowy admin
@@ -77,8 +80,10 @@ Typy błędów:
 	    45 Niepoprawny cel
 
     8x Inne błędy
-	    80 Nie znaleziono starego nicku (SetNick u admina)
+	    80 Nie znaleziono starego nicku (SetNick)
 	    81 Nie poprawne ID (SetTurn lub SetNick)
+        82 Nie poprawny czas (SetDelay)
+        83 Nie podano opcji (SetRandomFilling)
 
     9x Błędy administratorskie
 	    90 Nie istnieje taki gracz
