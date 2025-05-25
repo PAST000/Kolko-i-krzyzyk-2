@@ -11,8 +11,6 @@ require "board.php";
 require "agent.php";
 require "randomBot.php";
 
-// TODO NIE ZAMYKA SIĘ !!!!!!!!!
-
 class GameServer implements MessageComponentInterface {
     protected $clients;
     protected $players = [];     // nick => socket, jeśli [nick] === null to nie ma takiego gracza
@@ -49,12 +47,13 @@ class GameServer implements MessageComponentInterface {
     const MIN_RESET_TIME = 0.5;
     const MAX_RESET_TIME = 30;
     const GAME_MODES = [[2,3], [2,4], [3,3], [3,4]]; // Ilość graczy, target
+    const RAND_NICKS = ["rand1", "rand2"];
 
     public function __construct($mainPort, $prt, $numberOfPlayers, $sizes, $target, $lp, $ifRand = false) {
         if($mainPort < 0 || $mainPort > 65535 || $mainPort === $prt) die("Podano nie poprawny port głównego serwera.");
         if($prt < 49152 || $prt > 65535) die("Podano nie poprawny port gry.");
         if($numberOfPlayers < 2 || $numberOfPlayers > self::MAX_NUM_OF_PLAYERS) die("Podano nie poprawną ilość graczy.");
-        if(empty(explode(",", $sizes))) die("Podano nie poprawne rozmiary planszy.");
+        if(count(explode(",", $sizes)) < 2) die("Podano nie poprawne rozmiary planszy.");
         if($target < 0) die("Podano nie poprawny cel.");
 
         $this->randomReset = boolval($ifRand);
@@ -63,9 +62,14 @@ class GameServer implements MessageComponentInterface {
         $this->port = $prt;
         $this->loop = $lp;
         $this->resetGame((int)$numberOfPlayers, $sizes, $target);
-        $this->conn = new mysqli("localhost", "root", "", "tictactoe2");
-        if ($this->conn->connect_error) 
-            die("Connection failed: " . $this->conn->connect_error);
+
+        try{
+            $this->conn = new PDO("mysql:host=localhost;dbname=tictactoe2", "root", "");
+            $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        }
+        catch (PDOException $e) {
+            die("Błąd połączenia z bazą danych.");
+        }
     }
 
     public function __destruct(){
@@ -98,27 +102,29 @@ class GameServer implements MessageComponentInterface {
         $nick = array_search($socket, $this->players);
         $this->clients->detach($socket);
         if($socket === $this->admin) $this->admin = null;
-        if($nick === false) return;  // Jeśli klient nie jest graczem
+        if($nick !== false){
+            $this->kickPlayer($nick);
+            $this->pause();
+        }
 
-        $this->kickPlayer($nick);
-        $this->pause();
-
-        if((count($this->players) + count($this->bots)) < 1)
+        if((count($this->players) + count($this->bots)) < 1){
             $this->shutdownTimer = $this->loop->addTimer(10, function () { 
                 if (count($this->players) < 1) die();  // Po odliczeniu czasu sprawdzamy czy ktoś nie dołączył
             });
+        }
         $this->refresh();
     }
 
     public function onError(ConnectionInterface $socket, \Exception $e) { 
         $nick = array_search($socket, $this->players);
         if($socket === $this->admin) $this->admin = null;
+
         $this->clients->detach($socket);
         $socket->close(); 
-        if($nick === false) return false;  // Jeśli klient nie jest graczem
-
-        $this->kickPlayer($nick);
-        $this->pause();
+        if($nick !== false){
+            $this->kickPlayer($nick);
+            $this->pause();
+        }
 
         if(count($this->players) < 1)
             $this->shutdownTimer = $this->loop->addTimer(10, function () { 
@@ -162,7 +168,7 @@ class GameServer implements MessageComponentInterface {
         $this->writeToDB($winnerWick);
 
         foreach($this->bots as $botnick => $bot)
-            $bot->gameResult($nick === $winnerWick ? 1 : -1);
+            $bot->gameResult($botnick === $winnerWick ? 1 : -1);
 
         $this->loop->addTimer($this->resetTime, function () {
             if(!$this->started){
@@ -213,7 +219,7 @@ class GameServer implements MessageComponentInterface {
             if($socket !== null) $socket->send("Error 44");
             return false;
         }
-        
+
         try{
             if($this->randomReset){
                 $mode = self::GAME_MODES[mt_rand(0, count(self::GAME_MODES) - 1)];
@@ -234,9 +240,9 @@ class GameServer implements MessageComponentInterface {
             foreach(array_merge($this->playersIDs, $this->botsIDs) as $nick => $id)
                 if($id < $this->numOfPlayers) 
                     $usedIDs[] = $id;
-            array_diff($this->freeIDs, $usedIDs);
+            $this->freeIDs = array_diff($this->freeIDs, $usedIDs);
 
-            if($this->numOfPlayers > (count($this->players) + count($this->bots))){  
+            if($this->numOfPlayers < (count($this->players) + count($this->bots))){  
                 foreach($this->playersIDs as $nick => $id)
                     if($id >= $this->numOfPlayers)
                         $this->kickPlayer($nick, false);
@@ -246,10 +252,11 @@ class GameServer implements MessageComponentInterface {
                         $this->kickBot($nick, false);
             }
 
-
             if($this->randomReset && $this->completeWithRands)
                 while(count($this->players) + count($this->bots) < $this->numOfPlayers)
-                    $this->addRandom(null, "rand" . (count($this->players) + count($this->bots) - 1 ));
+                    $this->addRandom(isset($this->bots[self::RAND_NICKS[0]]) ? self::RAND_NICKS[1] : self::RAND_NICKS[0]);
+
+            $this->turn = ($this->turn >= $this->numOfPlayers ? 0 : $this->turn);
 
             if($this->numOfPlayers === (count($this->players) + count($this->bots)))
                 $this->start(true);
@@ -257,6 +264,8 @@ class GameServer implements MessageComponentInterface {
                 $this->started = false;
 
             $this->refresh();
+            while($this->botTurn() && !$this->paused)
+                $this->refresh();
         }
         catch(Exception $e){ 
             return false; 
@@ -378,14 +387,13 @@ class GameServer implements MessageComponentInterface {
                     $socket->send("Error 31");
                     return false;
                 }
-                if($this->players[$args[1]] !== null){
+                if(!isset($this->players[$args[1]])){
                     $socket->send("Error 33");
                     return false;
                 }
                 break;
             case "join": 
                 if(count($this->freeIDs) < 1){
-                    file_put_contents("logsKiK2/join.txt", count($this->freeIDs), FILE_APPEND);
                     $socket->send("Error 30");
                     return false;
                 }
@@ -397,7 +405,7 @@ class GameServer implements MessageComponentInterface {
                     $socket->send("Error 31");
                     return false;
                 }
-                if($this->players[$args[1]] !== null){
+                if(!isset($this->players[$args[1]])){
                     $socket->send("Error 33");
                     return false;
                 }
@@ -414,7 +422,6 @@ class GameServer implements MessageComponentInterface {
                     return false;
                 }
                 if(count($this->freeIDs) < 1){
-                    file_put_contents("logsKiK2/addRand.txt", count($this->freeIDs), FILE_APPEND);
                     $socket->send("Error 30");
                     return false;
                 }
@@ -564,11 +571,11 @@ class GameServer implements MessageComponentInterface {
                 break; 
 
             case "addbot": 
-                return $this->addBot($socket, $args[1]);
+                return $this->addBot($socket, $args[1], "bot1");
                 break; 
             case "addrand":
             case "addrandom":
-                return $this->addRandom($socket, $args[1]);
+                return $this->addRandom($args[1]);
                 break; 
             case "setdelay":
                 $this->resetTime = floatval($args[1]);
@@ -710,17 +717,19 @@ class GameServer implements MessageComponentInterface {
 
     private function kickPlayer($nick, $appendID = true, $sendMessage = true){
         if(!isset($this->players[$nick])) return false;
-        if($sendMessage) $this->players[$playerKick]->send("Kicked");
+        if($sendMessage) $this->players[$nick]->send("Kicked");
         if($appendID) $this->freeIDs[] = $this->playersIDs[$playerKick];
-        $this->clients->detach($this->players[$playerKick]);
-        unset($this->players[$playerKick]); 
-        unset($this->playersIDs[$playerKick]);
+
+        $this->clients->detach($this->players[$nick]);
+        unset($this->players[$nick]); 
+        unset($this->playersIDs[$nick]);
         return true;
     }
 
     private function kickBot($nick, $appendID){
         if(!isset($this->bots[$nick])) return false;
         if($appendID) $this->freeIDs[] = $this->botsIDs[$nick];
+
         unset($this->bots[$nick]); 
         unset($this->botsIDs[$nick]);
         return true;
@@ -746,7 +755,7 @@ class GameServer implements MessageComponentInterface {
         return true;
     }
 
-    private function addRandom($socket, $nick){ // TODO - wywalić socket
+    private function addRandom($nick){ 
         try{
             $this->bots[$nick] = new RandomBot($this->board->count());
             $this->botsIDs[$nick] = array_shift($this->freeIDs);
@@ -760,9 +769,9 @@ class GameServer implements MessageComponentInterface {
         return true;
     }
 
-    private function botTurn(){  // Razem ze sprawdzeniem czy tura bota
+    private function botTurn(){  // Razem ze sprawdzeniem czy tura bota\
         $nick = array_search($this->turn, $this->botsIDs);
-        if($nick === false || !$this->started) return false;
+        if($nick === false || $this->started === false) return false;
 
         if(gettype($this->bots[$nick]) === "RandomBot")
             $move = $this->bots[$nick]->makeMove($this->board->implode($this->bots[$nick]->getBoardSeparator()), 
@@ -791,16 +800,27 @@ class GameServer implements MessageComponentInterface {
         foreach($merged as $nick => $id)
             $nicks[] = $nick;
 
-        $query = "INSERT INTO results (nick0, nick1, nick2, winner, startDate, endDate, port) VALUES (" 
-            . (empty($nicks[0]) ? "NULL" : "'" . $nicks[0] . "'") . ", " 
-            . (empty($nicks[1]) ? "NULL" : "'" . $nicks[1] . "'") . ", " 
-            . (empty($nicks[2]) ? "NULL" : "'" . $nicks[2] . "'") . ", "
-            . ($winner === null ? "NULL" : "'" . $winner . "'") . ", '" 
-            . $this->startTime . "', '" 
-            . date("Y-m-d h:i:s") . "', '" 
-            . $this->port . "');";
         try{
-            $this->conn->query($query);
+            $nick0 = !empty($nicks[0]) ? $nicks[0] : null;
+            $nick1 = !empty($nicks[1]) ? $nicks[1] : null;
+            $nick2 = !empty($nicks[2]) ? $nicks[2] : null;
+            $startDate = $this->startTime;
+            $endDate = date("Y-m-d H:i:s");
+            $port = $this->port;
+
+            $stmt = $this->conn->prepare(
+                "INSERT INTO results (nick0, nick1, nick2, winner, startDate, endDate, port)
+                 VALUES (:nick0, :nick1, :nick2, :winner, :startDate, :endDate, :port)"
+            );
+            $stmt->execute([
+                ':nick0' => $nick0,
+                ':nick1' => $nick1,
+                ':nick2' => $nick2,
+                ':winner' => $winner,
+                ':startDate' => $startDate,
+                ':endDate' => $endDate,
+                ':port' => $port
+            ]);
         }
         catch(Exception $e){ return false; }
         return true;
