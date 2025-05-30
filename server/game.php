@@ -28,7 +28,7 @@ class GameServer implements MessageComponentInterface {
     protected $started = false;
     protected $turn = 0;
     protected $paused = false;
-    protected $stopRefresh = false;       // Jeśli funkcja interpretująca ma nie zwracać false (np przy ping), ale chcemy zatrzymać refresh
+    protected $preventRefresh = false;    // Czy zatrzymać refresh
     protected $resetTime = 0.5;           // Czas od zakończenia gry do automatycznego ponownego startu (w senkundach)
     protected $randomReset = false;       // Czy losować GAME_MODE w resetGame()
     protected $completeWithRands = false; // Czy dopełniać graczy botami losującymi
@@ -146,9 +146,7 @@ class GameServer implements MessageComponentInterface {
         }
         else if(!$this->player($socket, $args)) return;
 
-        if(!$this->stopRefresh) $this->refresh();
-        else $this->stopRefresh = false;
-
+        $this->refresh();
         while($this->botTurn() && !$this->paused)
             $this->refresh();
     }
@@ -599,11 +597,10 @@ class GameServer implements MessageComponentInterface {
 
             case "ping":
                 $socket->send("pong");
-                $this->stopRefresh = true;
+                $this->preventRefresh = true;
                 break;
-
             case "pong": 
-                $this->stopRefresh = true; 
+                $this->preventRefresh = true;
                 break;
 
             default: 
@@ -640,9 +637,11 @@ class GameServer implements MessageComponentInterface {
 
             case "ping":
                 $socket->send("pong");
+                $this->preventRefresh = true;
                 break;
-
-            case "reping": break;
+            case "pong": 
+                $this->preventRefresh = true;
+                break;
             default: 
                 $socket->send("Error 10");
                 break;
@@ -651,12 +650,17 @@ class GameServer implements MessageComponentInterface {
     }
 
     private function refresh(){
+        if($this->preventRefresh){
+            $this->preventRefresh = false;
+            return;
+        }
         $txt = "Refresh " . 
                 json_encode(array_merge($this->playersIDs, $this->botsIDs)) . ' ' . 
                 implode(self::SIZES_DELIMETER, $this->board->getSizes()) . ' ' .
                 $this->board->implode() . ' ' . 
                 $this->board->getTarget() . ' ' . 
                 $this->turn;
+
         foreach ($this->clients as $client) 
             $client->send($txt . ' ' . $this->getIDBySocket($client));
     }
@@ -690,7 +694,7 @@ class GameServer implements MessageComponentInterface {
 
     private function start($unpause = false){
         $this->started = true;
-        $this->startTime = date("Y-m-d h:i:s");
+        $this->startTime = date(self::DATE_FORMAT);
         foreach($this->clients as $client) 
             $client->send("Started");
         if($unpause && $this->paused)
@@ -789,6 +793,9 @@ class GameServer implements MessageComponentInterface {
         $this->turn %= (count($this->players) + count($this->bots));
         $this->checkWin();
         $this->checkTie();
+
+        if(isset($this->bots[array_search($this->turn, $this->botsIDs)]) && $this->turn != 0)
+            $this->preventRefresh = true;
         return true;
     }
 
