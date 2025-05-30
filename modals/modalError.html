@@ -24,8 +24,6 @@
         font-size: x-large;
         font-weight: bold;
     }
-
-
 </style>
 
 <html lang="pl">
@@ -41,15 +39,15 @@
 
 <script>
     window.addEventListener("message", function(event) {
-        if(event.data === "showInfo") {
-            let json = sessionStorage.getItem("infoData");
-            if(json === null) window.parent.postMessage("closeInfo", "*"); 
-            let infoData = JSON.parse(json);
-            if(infoData.txt === null) window.parent.postMessage("closeInfo", "*"); 
-            document.getElementById("info").innerHTML = infoData.txt; 
+        if(event.data === "showError") {
+            let json = sessionStorage.getItem("errorData");
+            if(json === null) window.parent.postMessage("closeError", "*"); 
+            let errorData = JSON.parse(json);
+            if(errorData.txt === null) window.parent.postMessage("closeError", "*"); 
+            document.getElementById("info").innerHTML = errorData.txt; 
         }
     });
     document.getElementById("close").onclick = function() { 
-        window.parent.postMessage("closeInfo", "*"); 
+        window.parent.postMessage("closeError", "*"); 
     };
 </script>

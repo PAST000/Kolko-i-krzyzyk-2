@@ -14,7 +14,7 @@
 <body>
     <header>
         <img src="../resources/icon.png" alt="Nie udało się załadować ikony">
-        <h1>Kółko i krzyżyk 2</h1>
+        <h1 id="gameTitle">Kółko i krzyżyk 2</h1>
         <nav>
             <button id="howToButton">Jak grać</button> 
             <div class="line"></div>
@@ -36,6 +36,11 @@
             <p id="turn">Tura gracza: 0</p>
             <p id="yourID">Twoje ID: </p>
             <p id="target">Cel: </p>
+            <button id="adminButton">Administrator</button> 
+            <div id="hideWinWrapper">
+                <input type="checkbox" name="hideWin" id="hideWin">
+                <label for="hideWin" id="hideWinLabel">Nie pokazuj ekranu wygranej</label>
+            </div>
 
             <div id="consoleWrapper">
                 <button id="send">Wyślij</button>
@@ -76,10 +81,11 @@
         Adam Stachowicz 2025
     </footer>
    
-    <div id="howToWrapper" class="modalWrapper"> <iframe src="../modals/modalHowTo.html" title="howToPlay"></iframe> </div>
-    <div id="controlWrapper" class="modalWrapper"> <iframe src="../modals/modalControl.html" title="control"></iframe> </div>
+    <div id="howToWrapper" class="modalWrapper"> <iframe src="../modals/modalHowTo.html" title="howToPlay" id="howToIframe"></iframe> </div>
+    <div id="controlWrapper" class="modalWrapper"> <iframe src="../modals/modalControl.html" title="control" id="controlIframe"></iframe> </div>
     <div id="winWrapper" class="modalWrapper"> <iframe src="../modals/modalWin.html" title="win" id="winIframe"></iframe> </div>
-    <div id="infoWrapper" class="modalWrapper"> <iframe src="../modals/modalInfo.html" title="info" id="infoIframe"></iframe> </div>
+    <div id="errorWrapper" class="modalWrapper"> <iframe src="../modals/modalError.html" title="error" id="errorIframe"></iframe> </div>
+    <div id="adminWrapper" class="modalWrapper"> <iframe src="../modals/modalAdmin.html" title="admin" id="adminIframe"></iframe> </div>
 </body>
 </html>
 
@@ -101,10 +107,6 @@
 
     const canvas = document.getElementById("canvas");
     let board = new Board(canvas, canvas.offsetWidth, canvas.offsetHeight, 4, 4, 4, 70, 14, 3);
-    document.getElementById("howToButton").onclick = function(){ document.getElementById("howToWrapper").style.display = "block"; };
-    document.getElementById("controlButton").onclick = function(){ document.getElementById("controlWrapper").style.display = "block"; };
-    document.getElementById("resultsButton").onclick = function(){ document.location.href = "../results"; }
-    document.getElementById("error").ondblclick = function(){ document.getElementById("error").innerHTML = ""; }
 
     let formData = JSON.parse(sessionStorage.getItem("hostData"));
     if(formData === null){
@@ -140,7 +142,8 @@
     socket.onopen = function() { 
         console.log('Połączono'); 
         if(action === "host"){
-            socket.send("Create " + formData.nOfPlayers + " " + formData.sizes + " " + formData.target); 
+            socket.send("Create " + formData.nOfPlayers + " " + formData.sizes + " " + formData.target + " " + formData.randomGame);
+            console.log("Create " + formData.nOfPlayers + " " + formData.sizes + " " + formData.target + " " + formData.randomGame);
             admin = true;
         }
         if(action === "join") socket.send("Join " + formData.nick);
@@ -199,6 +202,7 @@
                 refreshInfo(JSON.parse(args[1]), target, turn, ID, admin);
             break;
             case "won": 
+                if(document.getElementById("hideWin").checked) return;
                 if(args[1] === undefined || args[2] === undefined){
                     console.log("Błędna komenda Won: ", args);
                     return;
@@ -208,19 +212,15 @@
                                                                    nick : args[2], 
                                                                    field : (args[3] === undefined) ? null : args[3], 
                                                                    direction : (args[4] === undefined) ? null : args[4] }));
-                console.log({ id : args[1], 
-                              nick : args[2], 
-                              field : (args[3] === undefined) ? null : args[3], 
-                              direction : (args[4] === undefined) ? null : args[4] });
                 document.getElementById("winWrapper").style.display = "block"; 
                 document.getElementById("winIframe").contentWindow.postMessage("showWin", "*");
                 break;
             case "joined": break;
             case "closed": 
-                showInfo("Serwer został zamknięty.");
+                showError("Serwer został zamknięty.");
                 break;
             case "kicked": 
-                showInfo("Zostałeś wyrzucony.");
+                showError("Zostałeś wyrzucony.");
                 break;
             case "started": 
                 document.getElementById("paused").style.display = "none"; 
@@ -235,13 +235,17 @@
                 document.getElementById("error").innerHTML = "Error: " + args[1]; 
                 break;
             case "ping": 
-                socket.send("Reping"); 
+                socket.send("Pong"); 
                 break;
-            case "reping": 
-                console.log("Reping"); 
+            case "pong": 
+                console.log("Pong"); 
                 break;
-            case "youareadmin": break;
-            default: console.log("Incorrect message: " + msg + " " + msg.toLowerCase()); break;
+            case "youareadmin": 
+                document.getElementById("adminButton").style.display = "inline-block";
+                break;
+            default: 
+                console.log("Incorrect message: " + msg + " " + msg.toLowerCase()); 
+                break;
         }
     }
 
@@ -259,14 +263,6 @@
             socket.onclose = function() { onClose(); };
         }
         else
-            showInfo("Połączenie zamknięte.");
-    }
-
-    function showInfo(text){
-        if(!text) text = "Błąd w pobieraniu danych.";
-        sessionStorage.removeItem("infoData");
-        sessionStorage.setItem("infoData", JSON.stringify({ txt : text }));
-        document.getElementById("infoWrapper").style.display = "block";
-        document.getElementById("infoIframe").contentWindow.postMessage("showInfo", "*");
+            showError("Połączenie zamknięte.");
     }
 </script>

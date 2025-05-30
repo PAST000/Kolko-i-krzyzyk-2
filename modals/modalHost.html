@@ -96,8 +96,46 @@
         margin-bottom: 15px;
     }
 
-    #addressWrapper{
-        margin-top: 20px;
+    #randomWrapper{
+        text-align: center;
+    }
+
+    #randomWrapper > input{
+       float:none;
+       width:16px;
+       height: 16px;
+       margin-top: 2px;
+    }
+
+    #infoIcon{
+        content: url(../resources/randomGameInfo.svg);
+        background-repeat: no-repeat;
+        background-size: 100% 100%;
+        width: 18px;
+        height: 18px;
+        display: inline-block;
+        position: relative;
+        top: 4px;
+        left: 6px;
+    }
+
+    #randomInfo{
+        display: none;
+        background-color: grey;
+        color: white;
+        border-radius: 6px;
+        text-align: center;
+        font-size: 85%;
+        padding: 5px;
+        transition: display 2s ease;
+    }
+
+    #randomInfo > table{
+        border-collapse: collapse;
+    }
+
+    #randomInfo td, #randomInfo th{
+        border: white 1px solid;
     }
 
     p{
@@ -120,6 +158,10 @@
     </div>
     <p id="error">Wprowadź poprawne dane</p>
 
+    <div class="wrapper">
+        <label for="port">Port serwera: </label>
+        <input type="number" id="port" name="port" value="3310" min="1" max="65535" step="1">
+    </div>
     <div class="wrapper">
         <label for="nickInput">Nick: </label>
         <input type="text" id="nickInput" name="nickInput" placeholder="Zostaw puste, jeśli nie chcesz dołącząć.">
@@ -145,12 +187,42 @@
     </section>
 
     <div class="wrapper">
-        <label for="players">Ilość graczy: </label>
+        <label for="players" id="numOfPlayersLabel">Ilość graczy: </label>
         <input type="number" id="players" name="players" value="2" min="2" max="3" required>
     </div>
     <div class="wrapper">
-        <label for="players">Długość łańcucha: </label>
+        <label for="target" id="targetLabel">Długość łańcucha: </label>
         <input type="number" id="target" name="target" value="3" min="3" max="15" required>
+    </div>
+    <div class="wrapper" id="randomWrapper">
+        <input type="checkbox" name="randomGame" id="randomGame" onclick="randomClick()">
+        <label for="randomGame">Losowy tryb gry</label>
+        <span id="infoIcon"></span><br>
+        <div id="randomInfo">
+            Dostępne tryby:
+            <table>
+                <tr>
+                    <th>Liczba graczy</th>
+                    <th>Długość łańcucha</th>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>3</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>4</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>3</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>4</td>
+                </tr>
+            </table>
+        </div>
     </div>
 
     <button id="start">Rozpocznij</button>
@@ -161,6 +233,32 @@
     document.getElementById("close").onclick = function() {
         window.parent.postMessage("closeModal", "*"); 
     };
+
+    const randomInfo = document.getElementById('randomInfo');
+    document.getElementById("infoIcon").addEventListener('mouseenter', () => {
+        randomInfo.style.display = "inline-block";
+    });
+
+    document.getElementById("infoIcon").addEventListener('mouseleave', () => {
+        setTimeout(() => {
+            randomInfo.style.display = "none";
+        }, 50);
+    });
+
+    function randomClick(){
+        const checkbox = document.getElementById("randomGame");
+        const numOfPlayersLabel = document.getElementById("numOfPlayersLabel");
+        const targetLabel = document.getElementById("targetLabel");
+
+        if(checkbox.checked === true){
+            numOfPlayersLabel.style.textDecoration = "line-through"; 
+            targetLabel.style.textDecoration = "line-through";
+        }
+        else{
+            numOfPlayersLabel.style.textDecoration = "none"; 
+            targetLabel.style.textDecoration = "none";
+        }
+    }
 
     const dimsInput =  document.getElementById("dims");
     const playersInput =  document.getElementById("players");
@@ -204,6 +302,8 @@
         let dimsArr = [];
         const name = document.getElementById("nickInput").value;
         const trgt = document.getElementById("target").value;
+        const randomInput = document.getElementById("randomGame");
+        let prt = parseInt(document.getElementById("port").value);
         
         for(let i = 1; i <= dims; i++){
             if(document.getElementById("dim" + i).value < 2){
@@ -213,13 +313,22 @@
             dimsArr[i - 1] = document.getElementById("dim" + i).value;
         }
 
+        numOfPlayers = parseInt(playersInput.value);
         if( dimsArr.length < 2 || numOfPlayers < 2 || trgt < 0){
             document.getElementById("error").style.display = "block";
             return;
         }
 
+        if(prt <= 0 || prt > 65535 || isNaN(prt)) prt = 3310;
+
         sessionStorage.clear();
-        sessionStorage.setItem("hostData", JSON.stringify({ nick: name, nOfPlayers : numOfPlayers, sizes : dimsArr, target : trgt }));
+        sessionStorage.setItem("hostData", JSON.stringify({ port : prt, 
+                                                            nick: name, 
+                                                            nOfPlayers : numOfPlayers, 
+                                                            sizes : dimsArr, 
+                                                            target : trgt, 
+                                                            randomGame : randomInput.checked
+                                                          }));
         window.parent.postMessage("closeModal", "*"); 
         window.parent.location.href = "../game";
     };

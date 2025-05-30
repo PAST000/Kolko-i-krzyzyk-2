@@ -7,10 +7,9 @@ use Symfony\Component\Process\Process;
 require 'vendor/autoload.php';
 
 $address = "0.0.0.0";
-$port = "3310";
-
+$port = $argv[1] ?? "3310";
+if(!is_numeric($port) || $port <= 0 || $port > 65535) $port = "3310";
 const argsDelimeter = ' ';
-const commandTypes = [ "create", "ping", "reping", "new" ];
 
 class Server implements MessageComponentInterface {
     protected $clients;
@@ -36,7 +35,7 @@ class Server implements MessageComponentInterface {
         echo "Połączenie zamknięte: {$conn->resourceId}\n";
     }
 
-    public function onError(ConnectionInterface $conn, \Exception $e) {
+    public function onError(ConnectionInterface $conn, \Exception $e) {  // TODO
         echo "Błąd: {$e->getMessage()}\n";
         $conn->close();
     }
@@ -46,13 +45,13 @@ class Server implements MessageComponentInterface {
         if(empty($args) || empty($args[0])) return false;
 
         switch(strtolower($args[0])){
-            case commandTypes[0]:  // Create
+            case "create": 
                 $this->createGame($socket, $args);
                 break;
-            case commandTypes[1]:  // Ping
-                $socket->send("Reping");
+            case "ping":
+                $socket->send("Pong");
                 break;
-            case commandTypes[2]:  // Reping
+            case "pong":
                 break;
         }
     }
@@ -71,7 +70,7 @@ class Server implements MessageComponentInterface {
         if(!empty($this->freePorts)) $prt = array_shift($this->freePorts);
         else $this->gamePort++;
 
-       /* while(!$this->checkPort($prt)){
+       while(!$this->checkPort($prt)){
             if($prt > 65535){
                 $socket->send("Error 42");
                 return;
@@ -79,9 +78,9 @@ class Server implements MessageComponentInterface {
 
             array_push($this->freePorts, $prt);  // Zwracamy port, być może później się zwolni
             $prt = $this->gamePort++;
-        }*/
+        }
 
-        $process = new Process([PHP_BINARY, __DIR__ . "/game.php", $this->port , $prt, $args[1], (string)$args[2], $args[3]]);
+        $process = new Process([PHP_BINARY, __DIR__ . DIRECTORY_SEPARATOR . "game.php", $this->port , $prt, $args[1], (string)$args[2], $args[3], $args[4]]);
         $process->start();
         $this->games[$prt] = $process;
             
