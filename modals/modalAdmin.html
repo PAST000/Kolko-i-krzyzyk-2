@@ -1,180 +1,73 @@
 <!DOCTYPE html>
-<style>
-    html{
-        margin: 0;
-        height: 100%;
-    }
-    body{
-        margin: 0;
-        display: flex;
-        align-items: center;
-        height: 100%;
-    }
-
-    #modalWrapper{
-        border: 5px solid black;
-        border-radius: 10px;
-        padding: 20px;
-        padding-top: 10px;
-        width: 25%;
-        background-color: rgb(101, 208, 250);
-        margin: auto;
-        font-size: 130%;
-    }
-
-    #modalWrapper > input[type="text"]{
-        width: 100%;
-        box-sizing: border-box;
-        margin-bottom: 10px;
-        padding: 4px;
-        font-size: medium;
-    }
-
-    #close{
-        float: right;
-        background-color: transparent;
-        font-weight: bold;
-        font-size: 22px;
-        border: 0;
-    }
-
-    label{
-        font-weight: bold;
-        font-size: large;
-        margin-left: 10px;
-        color: rgb(58, 58, 58);
-        margin-bottom: 2px;
-    }
-
-    #error{
-        display: none;
-        color: rgb(218, 0, 0);
-        text-align: center;
-        font-size: 18px;
-        margin: 10px 0px;
-    }
-
-    #playersInfo{
-        color: dimgrey;
-        text-align: center;
-        margin-bottom: 5px;
-        border-radius: 5px;
-    }
-
-    .playerWrapper{
-        position: relative;
-        margin-bottom: 5px;
-    }
-
-    .playerWrapper > p{
-        margin: 0 auto;
-        display: inline;
-    }
-
-    .kick{
-        background-image: url(../resources/kick.svg);
-        background-repeat: no-repeat;
-        background-size: 100% 100%;
-        width: 24px;
-        height: 24px;
-        float: right;
-    }
-
-    .kick::after{
-        clear: both;
-    }
-
-    #parametersContainer{
-        margin-top: 5px;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-    }
-
-    #stateContainer{
-        display: flex;
-        flex-direction: row;
-        justify-content: center;
-        margin-top: 7px;
-    }
-
-    .stateButton{
-        position: relative;
-        border: 0;
-        border-radius: 5px;
-        margin: 6px;
-        padding: 6px 8px;
-        color: white;
-        font-weight: 600;
-        font-size: 105%;
-    }
-
-    .stateButton:hover{
-        top: -3px;
-        left: -3px;
-        box-shadow: 4px 4px 2px grey;
-    }
-
-    #pause{
-        background-color: orange;
-    }
-
-    #unpause{
-        background-color: green;
-    }
-
-    #drop{
-        background-color: rgb(202, 0, 0);
-    }
-</style>
-
 <html lang="pl">
 <head>
     <meta charset="utf-8">
+    <link rel="stylesheet" href="adminStyle.css">
 </head>
 
 <section id="modalWrapper">
     <button id="close">&times</button><br>
+    <section id="categoryList">
+        <div class="category" id="playersCategory">Gracze</div>
+        <div class="category" id="gameplayCategory">Rozgrywka</div>
+    </section>
     <p id="error">Wprowadź poprawne dane</p>
-    <fieldset id="playersInfo">
-        <legend>Gracze</legend>
-        <div id="playersContainer"></div>
-    </fieldset>
 
-    <div id="addBotWrapper">
-        <input type="text" name="botNick" id="botNick" placeholder="Pseudonim bota">
-        <input type="checkbox" name="randBot" id="randBot">
-        <label for="randBot">Bot losujący</label><br>
-        <button id="addBot">Dodaj bota</button>
-    </div>
+    <section class="categoryContainer" id="playersContainer">
+        <fieldset id="playersInfo">
+            <legend>Gracze</legend>
+            <div id="playersContainer"></div>
+        </fieldset>
+        <div id="addBotWrapper">
+            <input type="text" name="botNick" id="botNick" placeholder="Pseudonim bota">
+            <input type="checkbox" name="randBot" id="randBot">
+            <label for="randBot">Bot losujący</label><br>
+            <button id="addBot">Dodaj bota</button>
+        </div>
+    </section>
 
-    <fieldset id="parametersContainer">
-        <div>
-            <label for="turnInput">Tura: </label>
-            <input type="number" name="turnInput" id="turnInput" placeholder="Zmień turę">
+    <section class="categoryContainer" id="gameplayContainer">
+        <fieldset id="parametersContainer">
+            <div>
+                <label for="turnInput">Tura: </label>
+                <input type="number" name="turnInput" id="turnInput" placeholder="Zmień turę">
+            </div>
+            <div>
+                <label for="turnInput">Opóźnienie nowej gry: </label>
+                <input type="number" name="delayInput" id="delayInput" step="0.1" placeholder="W sekundach">
+            </div>
+            <div>
+                <label for="turnInput">Dopełniaj grę botami losującymi: </label>
+                <input type="checkbox" name="fullfilInput" id="fullfilInput">
+            </div>
+            <button id="apply">Ustaw</button>
+        </fieldset>
+        <div id="stateContainer">
+            <button class="stateButton" id="pause">Pauza</button>
+            <button class="stateButton" id="unpause">Wznów</button>
+            <button class="stateButton" id="drop">Koniec</button>
         </div>
-        <div>
-            <label for="turnInput">Opóźnienie nowej gry: </label>
-            <input type="number" name="delayInput" id="delayInput" step="0.1" placeholder="W sekundach">
-        </div>
-        <div>
-            <label for="turnInput">Dopełniaj grę botami losującymi: </label>
-            <input type="checkbox" name="fullfilInput" id="fullfilInput">
-        </div>
-        <button id="apply">Ustaw</button>
-    </fieldset>
-
-    <div id="stateContainer">
-        <button class="stateButton" id="pause">Pauza</button>
-        <button class="stateButton" id="unpause">Wznów</button>
-        <button class="stateButton" id="drop">Koniec</button>
-    </div>
+    </section>
 </section>
 </html>
 
 <script>
     document.getElementById("close").onclick = function() { 
         window.parent.postMessage("closeModal", "*"); 
+    };
+    document.getElementById("playersCategory").onclick = function() { 
+        document.getElementById("playersCategory").style.bottom = "4px";
+        document.getElementById("gameplayCategory").style.bottom = "0px";
+
+        document.getElementById("playersContainer").style.display = "block";
+        document.getElementById("gameplayContainer").style.display = "none";
+    };
+    document.getElementById("gameplayCategory").onclick = function() { 
+        document.getElementById("playersCategory").style.bottom = "0px";
+        document.getElementById("gameplayCategory").style.bottom = "4px";
+
+        document.getElementById("playersContainer").style.display = "none";
+        document.getElementById("gameplayContainer").style.display = "block";
     };
 
     window.addEventListener("message", function(event) {
@@ -205,19 +98,4 @@
             console.log(adminData.players);
         }
     });
-
-    /*document.getElementById("join").onclick = function() {
-        const prt = parseInt(document.getElementById("port").value, 10);
-        const name = document.getElementById("nick").value;
-
-        if(prt === NaN || prt < 0 || prt > 65535 || name === "") {
-            document.getElementById("error").style.display = "block";
-            return;
-        }
-
-        sessionStorage.clear();
-        sessionStorage.setItem("joinData", JSON.stringify({ port : prt, nick : name }));
-        window.parent.postMessage("closeModal", "*"); 
-        window.parent.location.href = "../game";
-    };*/
 </script>
