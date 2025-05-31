@@ -140,6 +140,9 @@ export default class Engine{
         return this.#objects.length - 1;
     }
 
+    deleteObject(obj){
+        this.#objects = this.#objects.filter(x => x !== obj);
+    }
 
     rotateAll(rotX, rotY, rotZ = 0){
         this.rotationX += rotX;

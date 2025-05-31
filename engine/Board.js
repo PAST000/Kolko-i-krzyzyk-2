@@ -13,7 +13,7 @@ import Cone from "./Objects/Cone.js";
 export default class Board{
     #fields = [];
     #vertices = [];
-    #pawns = [];
+    #pawns = []; 
     #separator = ',';
     #playerIDs = [];
     #pawnTypes = [];  
@@ -291,10 +291,10 @@ export default class Board{
         this.engine.setPrecision(this.precision);
 
         for(let i = 0; i < this.#pawns.length; i++)
-            if(typeof(this.#pawns[i].precision) === "PseudoSphere")
+            if(typeof(this.#pawns[i]) === "PseudoSphere")
                 this.#pawns[i] = new PseudoSphere(this.#pawns[i].center, this.#pawns[i].radius, this.precision, 
                                                   this.#pawns[i].fillColor, this.#pawns[i].lineClr, this.#pawns[i].lineWidth);
-            else if(typeof(this.#pawns[i].precision) === "Cone")
+            else if(typeof(this.#pawns[i]) === "Cone")
                 this.#pawns[i] = new Cone(this.#pawns[i].center, this.#pawns[i].radius, this.#pawns[i].height, this.precision, 
                                                   this.#pawns[i].fillColor, this.#pawns[i].lineClr, this.#pawns[i].lineWidth);
         return true;
@@ -330,8 +330,10 @@ export default class Board{
                     this.addPawn(this.#pawnTypes[board[i]], i);
             }
             else
-                if(this.#pawns[i] !== null)
+                if(this.#pawns[i] !== null){
+                    this.engine.deleteObject(this.#pawns[i]);
                     this.#pawns[i] = null;
+                }
         }
         this.draw();
         return true;
