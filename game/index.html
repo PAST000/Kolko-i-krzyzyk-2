@@ -36,10 +36,15 @@
             <p id="turn">Tura gracza: 0</p>
             <p id="yourID">Twoje ID: </p>
             <p id="target">Cel: </p>
-            <button id="adminButton">Administrator</button> 
+            <button class="modalButton" id="adminButton">Administrator</button>
+            <button class="modalButton" id="boardStyleButton">Styl planszy</button> 
             <div id="hideWinWrapper">
                 <input type="checkbox" name="hideWin" id="hideWin">
                 <label for="hideWin" id="hideWinLabel">Nie pokazuj ekranu wygranej</label>
+            </div>
+            <div id="refreshIntervalWrapper">
+                <p>Interwał odświeżeń gry (sekundy)</p>
+                <input type="number" min="0" step="0.5" id="refreshInterval" value="1">
             </div>
 
             <div id="consoleWrapper">
@@ -104,6 +109,9 @@
     let ID = 0;
     let target;
     let admin = false;
+    let players = {};
+    let refreshInterval = 1;
+    let lastRefresh = 0;
 
     const canvas = document.getElementById("canvas");
     let board = new Board(canvas, canvas.offsetWidth, canvas.offsetHeight, 4, 4, 4, 70, 14, 3);
@@ -132,6 +140,15 @@
         if(id < 0) return false;
         sendMessage("Put " + board.idToArr(id).join(SIZES_DELIMETER));
     });
+    document.getElementById("adminButton").onclick = function(){ 
+        sessionStorage.removeItem("adminData");
+        sessionStorage.setItem("adminData", JSON.stringify(players));
+        document.getElementById("adminWrapper").style.display = "block";
+        document.getElementById("adminIframe").contentWindow.postMessage("showAdmin", "*"); 
+    };
+    document.getElementById("refreshInterval").onchange = function(){
+        refreshInterval = document.getElementById("refreshInterval").value;
+    }
 
     if(typeof formData.port === "number") port = formData.port;
     console.log(`ws://${address}:${port}`);
@@ -173,6 +190,9 @@
                     console.log("Incorrect refresh: ", args);
                     return false;
                 }
+                let date = new Date();
+                if(lastRefresh + refreshInterval*1000 > date.getTime()) break;
+                lastRefresh = date.getTime();
 
                 let sizes = args[2].trim().split(',');
                 let boardSizes = board.getSizes();
@@ -199,6 +219,7 @@
                 target = parseInt(args[4]); 
                 turn = parseInt(args[5]);
                 ID = parseInt(args[6]);
+                players = JSON.parse(args[1]);
                 refreshInfo(JSON.parse(args[1]), target, turn, ID, admin);
             break;
             case "won": 

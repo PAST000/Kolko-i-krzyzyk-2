@@ -183,8 +183,7 @@ iframe{
     margin: 0 auto;
 }
 
-#adminButton{
-    display: none;
+.modalButton{
     color: white;
     font-size: 120%;
     font-weight: bold;
@@ -192,7 +191,20 @@ iframe{
     background-color: mediumblue;
     padding: 5px;
     width: fit-content;
-    box-shadow: 4px 4px dimgray;
+    box-shadow: 3px 3px dimgray;
+    margin: 5px 0px;
+    transform: skew(-15deg);
+    position: relative;
+}
+
+.modalButton:hover{
+    box-shadow: 4px 4px lightgray;
+    bottom: 2px;
+    right: 2px;
+}
+
+#adminButton{
+    display: none;
 }
 
 #error{
