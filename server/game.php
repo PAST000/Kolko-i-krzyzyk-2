@@ -39,7 +39,7 @@ class GameServer implements MessageComponentInterface {
     protected $conn;
 
     const IF_LEARN = true;  // Do sieci neuronowych
-    const LEARNING_RATE = 0.1;
+    const LEARNING_RATE = 0.01;
     const DATE_FORMAT = "Y-m-d H:i:s";
     const MSG_DELIMETER = ' ';
     const SIZES_DELIMETER = ',';  // Ogółem przy większości implode/explode
@@ -68,7 +68,7 @@ class GameServer implements MessageComponentInterface {
             $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         }
         catch (PDOException $e) {
-            die("Błąd połączenia z bazą danych.");
+            $this->conn = false;
         }
     }
 
@@ -81,7 +81,8 @@ class GameServer implements MessageComponentInterface {
             $client->send("Closed");
             $this->clients->detach($client);
         }
-        $this->conn->close();
+        if($this->conn !== false)
+            $this->conn->close();
         $this->loop->stop();
     }
 
@@ -773,7 +774,7 @@ class GameServer implements MessageComponentInterface {
         return true;
     }
 
-    private function botTurn(){  // Razem ze sprawdzeniem czy tura bota\
+    private function botTurn(){  // Razem ze sprawdzeniem czy tura bota
         $nick = array_search($this->turn, $this->botsIDs);
         if($nick === false || $this->started === false) return false;
 
@@ -800,6 +801,7 @@ class GameServer implements MessageComponentInterface {
     }
 
     private function writeToDB($winner){
+        if($this->conn === false) return;
         $merged = array_merge($this->playersIDs, $this->botsIDs);
         if(count($merged) < 2) return false;
         asort($merged);

@@ -12,7 +12,7 @@ class Agent{
     private $game = [];  // stos tablic: id => [wejście, wyjście, wybrane]
 
     public const BOARD_SIZE = 64;
-    public const LEARNING_RATE = 0.05;
+    public const LEARNING_RATE = 0.01;
     public const GRADIENT_COUNT_TRESHOLD = 50;  // "Potrzebna" ilość gradientów z której bierzemy średnią i uczymy
     public const DRAW_REWARD = 0.75;
     public const FIRST_MOVE_WEIGHT = 0.1;
