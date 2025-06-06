@@ -15,7 +15,7 @@ Do gry (użytkownik):
 
 Do gry (admin):
     -Create numOfPlayers sizes[] target ifRand  // Jeżeli ifRand to losuje tryb gry przy resecie, puste jeśli nie
-    -Drop    // Koniec gry
+    -Drop                                       // Koniec gry
     -Clear position[]
     -ClearPlayer id
     -Kick id
