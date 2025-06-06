@@ -17,6 +17,7 @@ body{
     padding: 20px;
     padding-top: 10px;
     width: 25%;
+    min-width: 350px;
     background-color: rgb(101, 208, 250);
     margin: auto;
     font-size: 130%;
@@ -65,18 +66,11 @@ body{
     bottom: 4px;
 }
 
-#playersContainer{}
-
 #gameplayContainer{
     display: none;
 }
 
-
-
-
 label{
-    font-weight: bold;
-    font-size: large;
     margin-left: 10px;
     color: rgb(58, 58, 58);
     margin-bottom: 2px;
@@ -95,11 +89,22 @@ label{
     text-align: center;
     margin-bottom: 5px;
     border-radius: 5px;
+    padding: 7px 12px;
+}
+
+#playersInfo > section{
+    color: black;
+    font-size: medium;
 }
 
 .playerWrapper{
     position: relative;
     margin-bottom: 5px;
+    padding: 2px;
+}
+
+.playerWrapper:hover{
+    background-color: rgba(210, 210, 210, 0.55);
 }
 
 .playerWrapper > p{
@@ -107,18 +112,26 @@ label{
     display: inline;
 }
 
-.kick{
-    background-image: url(../resources/kick.svg);
-    background-repeat: no-repeat;
-    background-size: 100% 100%;
-    width: 24px;
-    height: 24px;
-    float: right;
+.playerID{
+    float: left;
+    font-style: italic;
+}
+.playerID::after{ clear: both; }
+
+.playerOption{
+    margin-left: 15px;
 }
 
-.kick::after{
-    clear: both;
+.playerOptionLabel{
+    font-size: 80%;
+    color: rgb(50, 50, 50);
 }
+
+#newNick{
+    float: right;
+    display: none;
+}
+#newNick:after{ clear: both; }
 
 #parametersContainer{
     margin-top: 5px;

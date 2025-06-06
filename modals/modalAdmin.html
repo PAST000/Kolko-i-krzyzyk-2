@@ -15,9 +15,17 @@
 
     <section class="categoryContainer" id="playersContainer">
         <fieldset id="playersInfo">
-            <legend>Gracze</legend>
-            <div id="playersContainer"></div>
+            <section id="playersDataContainer"></section>
         </fieldset>
+
+        <input type="radio" name="playerOption" class="playerOption" value="Kick" id="kick" onchange="playerOptionChange(this)">
+        <label for="kick" class="playerOptionLabel">Wyrzuć</label><br/>
+        <input type="radio" name="playerOption" class="playerOption" value="ClearPlayer" id="clearPlayer" onchange="playerOptionChange(this)">
+        <label for="clearPlayer" class="playerOptionLabel">Wyczyść pionki</label><br/>
+        <input type="radio" name="playerOption" class="playerOption" value="SetNick" id="setNick" onchange="playerOptionChange(this)">
+        <label for="setNick" class="playerOptionLabel">Zmień nazwę</label>
+        <input type="text" name="newNick" id="newNick" placeholder="Nowa nazwa...">
+
         <div id="addBotWrapper">
             <input type="text" name="botNick" id="botNick" placeholder="Pseudonim bota">
             <input type="checkbox" name="randBot" id="randBot">
@@ -52,6 +60,12 @@
 </html>
 
 <script>
+    let chosenPlayer = null;
+
+    window.onload = function(){
+        window.postMessage("showAdmin", "*"); 
+    }
+
     document.getElementById("close").onclick = function() { 
         window.parent.postMessage("closeModal", "*"); 
     };
@@ -76,26 +90,45 @@
         };
         if(event.data === "showAdmin") {
             let adminData = JSON.parse(sessionStorage.getItem("adminData"));
+
             if(adminData.players === null)
                 window.parent.postMessage("closeModal", "*"); 
 
             let childrenArray = [];
             for(let i = 0; i < adminData.players.length; i++){
                 const wrapper = document.createElement("div");
+                const id = document.createElement("p");
                 const par = document.createElement("p");
-                const txt = document.createTextNode("[" + adminData.players[i][0] + "] " + adminData.players[i][1]);
-                const button = document.createElement("button");
 
-                par.appendChild(txt);
-                button.classList.add("kick");
-
+                id.appendChild(document.createTextNode("[" + adminData.players[i][0] + "] "));
+                par.appendChild(document.createTextNode(adminData.players[i][1]));
+                id.classList.add("playerID");
                 wrapper.classList.add("playerWrapper");
+                wrapper.appendChild(id);
                 wrapper.appendChild(par);
-                wrapper.appendChild(button);
+                wrapper.addEventListener("click", function () {
+                    playerClick(this);
+                });
                 childrenArray.push(wrapper);
             }
-            document.getElementById("playersContainer").replaceChildren(...childrenArray);
-            console.log(adminData.players);
+            document.getElementById("playersDataContainer").replaceChildren(...childrenArray);
         }
     });
+
+    function playerClick(playerTag){
+        const playersTags = document.getElementById("playersDataContainer").children;
+        for(let child of playersTags)
+            child.style.backgroundColor = "transparent";
+        playerTag.style.backgroundColor = "rgba(255, 255, 255, 0.6)";
+        chosenPlayer = playerTag.children[1].innerText;
+    }
+
+    function playerOptionChange(radio){
+        if(radio.value === "SetNick"){
+            document.getElementById("newNick").style.display = "block";
+        }
+        else{
+            document.getElementById("newNick").style.display = "none";
+        }
+    }
 </script>
